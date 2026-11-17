@@ -1,0 +1,7 @@
+node_modules/
+.env
+data/
+toolkit/img/
+toolkit/img_pdf/
+toolkit/canvas_assets/
+*.log
