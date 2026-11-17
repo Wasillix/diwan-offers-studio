@@ -1,0 +1,11 @@
+[
+  {"key": "meat", "nav": "لحوم ودجاج", "title_ar": "اللحوم والدجاج", "title_en": "Meat & Poultry", "img": "diwani-beef-kafta.png", "short_ar": "لحوم", "short_en": "Meat"},
+  {"key": "produce", "nav": "خضار وفواكه", "title_ar": "الخضار والفواكه", "title_en": "Fruits & Vegetables", "img": "frv-clementine.png", "short_ar": "خضار وفواكه", "short_en": "Fruits & Veg"},
+  {"key": "dairy", "nav": "ألبان وأجبان", "title_ar": "الألبان والأجبان", "title_en": "Dairy & Cheese", "img": "dairy-mroujna-laban-1kg.png", "short_ar": "ألبان", "short_en": "Dairy"},
+  {"key": "pantry", "nav": "المونة", "title_ar": "المونة والمطبخ", "title_en": "Pantry Essentials", "img": "mirasol-sunflower-oil-5-l.png", "short_ar": "مونة", "short_en": "Pantry"},
+  {"key": "bread", "nav": "خبز وراب", "title_ar": "الخبز والراب", "title_en": "Bread & Wraps", "img": "foodys-tortilla-wrap-370g.png", "short_ar": "خبز", "short_en": "Bread"},
+  {"key": "healthy", "nav": "سناك صحّي", "title_ar": "سناك صحّي", "title_en": "Healthy Snacks", "img": "taqa-bar-no-added-sugar-vegan-40g.png", "short_ar": "سناك صحّي", "short_en": "Healthy Snacks"},
+  {"key": "snacks", "nav": "بسكويت ومشروب", "title_ar": "بسكويت ومشروبات", "title_en": "Biscuits & Drinks", "img": "al-marai-chocolate-milk-150ml.png", "short_ar": "بسكويت", "short_en": "Biscuits"},
+  {"key": "frozen", "nav": "المثلجات", "title_ar": "المثلجات", "title_en": "Frozen Food", "img": "chtoura-frozen-baby-okra-400g.png", "short_ar": "مثلجات", "short_en": "Frozen"},
+  {"key": "home", "nav": "تنظيف وبيت", "title_ar": "التنظيف والبيت", "title_en": "Home & Cleaning", "img": "spartan-fine-dish-washing-liquid-1300g.png", "short_ar": "تنظيف", "short_en": "Cleaning"}
+]

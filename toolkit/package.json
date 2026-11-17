@@ -1,0 +1,6 @@
+{
+  "name": "diwan-toolkit",
+  "private": true,
+  "type": "commonjs",
+  "description": "The render/check scripts are CommonJS; this keeps them that way inside the ESM repo and in every job's build/ copy."
+}

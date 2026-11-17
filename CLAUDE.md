@@ -54,3 +54,13 @@ D:\Diwan\005 - FMCG Items\001 - Isolated Items\   Product photo library (read-on
 - `npm run dev`: start server + UI at http://localhost:4321
 - `npm run mock`: same with the mock agent
 - `npm test`: state machine + toolkit smoke tests
+- `npm run smoke`: toolkit only (flyer, carousel, 16:9) for every look in `toolkit/themes/`, builds in `data/smoke/<look>/`
+- `npm run smoke:full`: same plus final PNGs, flattened PDF, mobile HTML and the MP4 (~1 min)
+
+## Toolkit notes
+
+- The week lives in `build/offer.json` + `sections.json`; `toolkit/README.md` lists every script.
+- Toolkit `.js` files are CommonJS (`toolkit/package.json`); the repo is ESM. Keep that file in every build copy.
+- Renderers use Playwright's Chromium and fall back to Microsoft Edge if it isn't installed (`PW_CHANNEL` forces one).
+- `toolkit/img/` only has the 26 `img_pdf` cut-outs + logos; the 800 px library was never zipped. It refills
+  as approved weeks promote their cut-outs.

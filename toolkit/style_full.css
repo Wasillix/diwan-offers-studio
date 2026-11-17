@@ -1,0 +1,125 @@
+
+/* ===== full-build additions ===== */
+.price.ph{opacity:.92}
+.price.lbp .pc{font-size:18px}
+/* missing-photo frame: same size as every image frame */
+.phimg{width:100%;height:100%;border:2px dashed #d6d0c7;border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-weight:700;font-size:15px;color:#a39d95;line-height:1.3;background:rgba(255,255,255,.6)}
+.phimg i{font-family:"Myriad";font-weight:400;font-size:11px;letter-spacing:.14em}
+/* saving badge (shows only when the price sheet has a Saving %) */
+.save{position:absolute;top:0;left:0;width:64px;height:64px;border-radius:50%;background:var(--ink);color:#fff;font-weight:800;font-size:19px;line-height:1;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:3}
+.save b{font-size:12px;font-weight:700;margin-bottom:2px}
+/* promo tiles: same footprint as a product card */
+.card.promo{background:var(--red);color:#fff;display:flex;flex-direction:column;align-items:flex-end;justify-content:flex-start;padding:22px 22px 20px;text-align:right;box-shadow:0 12px 30px rgba(161,34,34,.25)}
+.card.promo.alt{background:linear-gradient(150deg,var(--signal),var(--red))}
+.card.promo.ink{background:var(--ink)}
+.card.promo .pk{font-family:"Myriad";font-size:13px;letter-spacing:.18em;opacity:.8}
+.card.promo b{font-weight:800;font-size:34px;line-height:1.15;margin-top:10px}
+.card.promo .pt{font-weight:700;font-size:18px;opacity:.92;margin-top:4px}
+.card.promo .pqr{width:104px;height:104px;background:#fff;border-radius:14px;padding:9px;margin-top:auto;align-self:flex-start}
+.card.promo .url{margin-top:auto;align-self:flex-start;font-family:"Myriad";font-size:17px;border:1.5px solid rgba(255,255,255,.55);border-radius:30px;padding:8px 16px 6px}
+/* app banner: fills whole empty rows */
+.banner{grid-column:1/-1;position:relative;overflow:hidden;border-radius:26px;background:radial-gradient(110% 120% at 100% 0%,var(--signal) 0%,var(--red) 55%,#7a1818 100%);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:34px 44px;box-shadow:0 16px 36px rgba(161,34,34,.25)}
+.bring{position:absolute;border-radius:50%;border:2px solid rgba(255,255,255,.09)}
+.bring.a{width:640px;height:640px;right:-220px;top:-260px}
+.bring.b{width:900px;height:900px;right:-360px;top:-390px}
+.btxt{position:relative;order:1;text-align:right;display:flex;flex-direction:column;align-items:flex-start}
+.btxt .pk{font-family:"Myriad";font-size:15px;letter-spacing:.2em;opacity:.8}
+.btxt h4{font-weight:800;font-size:52px;line-height:1.12;margin-top:10px}
+.btxt p{font-family:"Myriad";font-size:19px;opacity:.9;margin-top:8px}
+.btxt ul{list-style:none;display:flex;gap:10px;margin-top:18px}
+.btxt li{font-weight:700;font-size:16px;background:rgba(255,255,255,.14);border-radius:20px;padding:8px 14px 5px}
+.btxt .stores{margin-top:20px}
+.bqr{position:relative;order:2;display:flex;flex-direction:column;align-items:center;gap:10px}
+.bqr img{width:190px;height:190px;background:#fff;border-radius:22px;padding:14px}
+.bqr span{font-family:"Myriad";font-size:15px;letter-spacing:.08em;opacity:.85}
+.banner.rows1{padding:22px 36px}
+.banner.rows1 .btxt h4{font-size:36px}
+.banner.rows1 .btxt h4 br{display:none}
+.banner.rows1 .btxt ul{display:none}
+.banner.rows1 .btxt .stores{margin-top:14px}
+.banner.rows1 .bqr img{width:150px;height:150px;padding:11px}
+.banner.rows1 .bqr span{display:none}
+.shot.noimg .halo{display:none}
+.banner{background:radial-gradient(110% 120% at 0% 0%,var(--signal) 0%,var(--red) 55%,#7a1818 100%)}
+.btxt .stores{align-self:flex-start}
+/* ===== social handles ===== */
+.social{display:inline-flex;align-items:center;gap:10px}
+.social a{display:inline-flex;width:34px;height:34px;border-radius:50%;background:var(--red);align-items:center;justify-content:center}
+.social svg{width:18px;height:18px;fill:#fff}
+.social b{font-family:"Myriad";font-weight:400;font-size:19px;letter-spacing:.02em;color:var(--ink);margin-left:4px}
+.social.big a{width:42px;height:42px;background:rgba(255,255,255,.16)}
+.social.big svg{width:22px;height:22px}
+.social.big b{color:#fff;font-size:22px}
+.card.promo .social{margin-top:auto;align-self:flex-start}
+.card.promo.alt b{font-size:40px}
+.iapp-t .social{margin-top:8px}
+/* ===== index: 7 tiles, second row centred ===== */
+.tiles{display:flex;flex-wrap:wrap;justify-content:center;gap:18px}
+.tile{flex:0 0 calc((100% - 54px)/4)}
+/* ===== brand banner ===== */
+.banner.brand .btxt .social{margin-top:22px;align-self:flex-start}
+.bbranch{position:relative;order:2;list-style:none;background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.14);border-radius:22px;padding:20px 24px;font-size:16px;line-height:1.75;font-weight:700}
+.bbranch b{font-weight:800}
+.bbranch li::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--yellow);margin-left:9px;vertical-align:middle}
+.banner.rows1 .bbranch{font-size:14px;line-height:1.6;padding:14px 18px}
+.banner.rows1.brand .btxt .social{margin-top:14px}
+.card.promo{align-items:flex-start}
+.card.promo .pqr,.card.promo .url,.card.promo .social{align-self:flex-end}
+.card.promo.alt .url{font-family:"Madani";font-weight:700;font-size:13px;line-height:1.5;border-radius:16px;padding:8px 12px 5px;text-align:right}
+/* ===== flowing grid: fewer cards fill the page, rows centred ===== */
+.grid.flow{display:flex;flex-direction:column;gap:18px;height:936px;direction:rtl}
+.grid.flow .grow{display:flex;justify-content:center;gap:18px;height:var(--rowh)}
+.grid.flow .card{width:var(--cw);height:var(--rowh);flex:0 0 auto;grid-template-rows:minmax(0,1fr) 30px 20px 72px}
+.grid.flow .shot{height:100%}
+.grid.flow .shot .halo{width:auto;height:min(92%, calc(var(--cw) - 60px));aspect-ratio:1}
+.grid.flow .imgs{width:calc(100% - 48px);height:calc(100% - 18px);max-width:calc(var(--cw) * 1.1)}
+.grid.flow .banner{height:302px;flex:0 0 auto}
+/* v2 – type +1.5pt (≈+2px) for readability */
+.grid.flow .card{grid-template-rows:minmax(0,1fr) 34px 22px 76px}
+.card h3{grid-row:2;align-self:end;font-weight:700;font-size:20.7px;line-height:32px;height:32px;margin:0;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.en{font-size:17px;line-height:22px;height:22px}
+.price{height:56px;padding:0 15px}
+.pi{font-size:42px}
+.pd,.pc{font-size:24px}
+.price.lbp .pi{font-size:38px}
+.price.lbp .pd{font-size:22px}
+.price.lbp .pc{font-size:19px}
+.unit b{font-size:19px}
+.unit i{font-size:15.5px}
+.var{font-size:15px;padding:8px 12px 6px}
+.save{width:70px;height:70px;font-size:21px}
+.save b{font-size:13.5px}
+/* ===== index v2: 9 tiles, 3 × 3, image beside text ===== */
+.tiles{gap:16px}
+.tile{flex:0 0 calc((100% - 32px)/3);height:186px;position:relative;padding:20px 18px 16px 140px}
+.tile .tshot{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:120px;height:120px}
+.tile .tshot .halo{width:118px;height:118px}
+.tile .tshot img{max-width:100%;max-height:112px}
+.tile h3{font-size:23px;line-height:32px;height:32px;margin-top:2px;text-overflow:ellipsis}
+.tile p{font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .trow{justify-content:flex-start;gap:10px}
+.tile .go{width:34px;height:34px;font-size:26px}
+.tile{min-width:0;overflow:hidden}
+.tile{padding-left:128px;padding-right:16px}.tile .tshot{left:10px;width:112px}.tile .tshot .halo{width:108px;height:108px}.tile h3{font-size:22px}
+/* v3 – titles & descriptions +2pt */
+.grid.flow .card{grid-template-rows:minmax(0,1fr) 38px 25px 76px}
+.card h3{font-size:23.4px;line-height:36px;height:36px}
+.en{font-size:19.7px;line-height:25px;height:25px}
+/* v4 – "starting from" price, back-to-back multipacks, "up to" badge */
+.price.from{gap:0}
+.price .pf{font-size:12.5px;line-height:1.05;font-weight:700;text-align:center;margin-right:8px;opacity:.95}
+.shot.stack .imgs img{max-width:46%;margin:0 -9%}
+.shot.stack .imgs img:nth-child(1){z-index:1;transform:translateY(-3%)}
+.shot.stack .imgs img:nth-child(2){z-index:2;transform:translateY(3%)}
+.shot.stack .imgs img:nth-child(3){z-index:3;transform:translateY(8%)}
+.save.up{font-size:22px}
+.save.up b{font-size:11.5px;white-space:nowrap}
+/* v5 – app banner without QR: store buttons stacked on the left */
+.bstores{position:relative;order:2}
+.bstores .stores{display:flex;flex-direction:column;gap:14px;margin:0}
+.bstores .store{padding:14px 24px;border-radius:16px;min-width:250px}
+.bstores .store svg{width:34px;height:34px}
+.bstores .store small{font-size:13px}
+.bstores .store b{font-size:24px}
+.bstores .stores .store+.store{border-left:0;padding-left:24px}
+.bstores .store{border:2px solid rgba(255,255,255,.55)}

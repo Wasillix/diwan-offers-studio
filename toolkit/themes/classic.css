@@ -1,0 +1,4 @@
+/* Look: classic (house style). Intentionally empty: style.css + style_full.css ARE the classic look.
+   Other looks live next to this file as themes/<look>.css, scoped to body.look-<look>.
+   Optional per look: themes/<look>_cover.py with cover_html(bf) for page 1, themes/<look>_mobile.css.
+   Never set font-size on .card h3 / .card .en (locked at 23.4px / 19.7px; check.js fails otherwise). */
