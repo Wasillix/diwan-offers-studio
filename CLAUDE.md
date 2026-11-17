@@ -68,6 +68,15 @@ D:\Diwan\005 - FMCG Items\001 - Isolated Items\   Product photo library (read-on
 - Mock agent: `server/agent/mock.js`; uses `data/smoke/<look>` renders when present. `MOCK_FAIL=flyer:1` fails once.
 - Each round's review.json is archived to `review/<stage>/r<n>/review.json` for round history.
 
+## Studio UI notes (web/)
+
+- Plain ES modules, no build: `app.js` (hash router) → `views/weeks.js`, `views/new-week.js`, `views/week.js`,
+  `views/lightbox.js`; helpers in `lib.js`. Served with `Cache-Control: no-cache`, so a refresh picks up edits.
+- Arabic goes through `txt()` (RTL + Madani; English sentences that quote Arabic keep LTR and isolate the Arabic).
+- Pins are stored in 1080-px page coordinates (`kind:'pin', file, page, x, y`); unsent edits are saved
+  on the server (`PUT …/pending`) so they survive a refresh.
+- Screenshots: run the mock server with `DATA_DIR=data/demo`, seed weeks, then `node test/screens.mjs` → `docs/screenshots/`.
+
 ## Toolkit notes
 
 - The week lives in `build/offer.json` + `sections.json`; `toolkit/README.md` lists every script.

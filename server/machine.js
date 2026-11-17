@@ -186,7 +186,10 @@ export function jobStatus(job) {
   if (job.status === 'done') return 'done';
   const statuses = STAGE_KEYS.map((k) => job.stages[k].status);
   if (statuses.includes('failed')) return 'failed';
-  if (statuses.includes('awaiting_review')) return job.questions.some((q) => q.blocking && q.answer == null) ? 'question' : 'awaiting_review';
+  if (statuses.includes('awaiting_review')) {
+    const open = job.questions.some((q) => q.blocking && q.answer == null && job.stages[q.stage]?.status === 'awaiting_review');
+    return open ? 'question' : 'awaiting_review';
+  }
   if (statuses.includes('running')) return 'running';
   if (statuses.includes('editing') || statuses.includes('pending')) return 'queued';
   return job.status;

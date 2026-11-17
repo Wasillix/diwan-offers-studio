@@ -71,8 +71,10 @@ function sampleCards(jobDir) {
     { code: 'FLAKS-112', ar: 'كوكيز شوفان طاقة', en: 'Taqa Oat Cookies', uom: '40 g', price: 1.11, saving: -0.13, div: 'healthy' },
     { code: 'HHLDS-1683', ar: 'أكياس سندويش فيرا', en: 'Vera Sandwich Bags', uom: '150 bags', price: 1.99, saving: -0.2, div: 'home' },
   ];
-  return items.slice(0, 48).map((r, i) => {
-    const sec = SECTIONS[i % SECTIONS.length];
+  const list = items.slice(0, 48);
+  const per = Math.ceil(list.length / SECTIONS.length);
+  return list.map((r, i) => {
+    const sec = SECTIONS[Math.min(SECTIONS.length - 1, Math.floor(i / per))];
     const sav = typeof r.saving === 'number' && r.saving < 0 ? Math.floor(-r.saving * 100) : null;
     return { n: i + 1, section: sec[0], section_ar: sec[1], ar: r.ar || r.en, en: r.en, unit: r.uom || '', price: typeof r.price === 'number' ? r.price : null,
       saving: sav && sav >= 10 ? `${sav}%` : '', codes: [r.code], photos: [] };
@@ -197,10 +199,13 @@ const BUILDERS = {
     let files = [];
     if (smoke) {
       const pngs = fs.readdirSync(path.join(smoke, 'out')).filter((f) => /^flyer-\d+\.png$/.test(f)).sort((a, b) => parseInt(a.slice(6)) - parseInt(b.slice(6)));
+      // section of each page in the 6–9 Nov reference build (index + 21 category pages)
+      const order = ['Index', ...[['Meat', 2], ['Produce', 2], ['Dairy', 4], ['Pantry', 3], ['Bread', 1], ['Healthy snacks', 2], ['Biscuits & drinks', 2], ['Frozen', 3], ['Home', 2]]
+        .flatMap(([s, n]) => Array.from({ length: n }, (_, k) => (n > 1 ? `${s} ${k + 1}/${n}` : s)))];
       files = pngs.map((f, i) => {
         const name = `page-${String(i + 1).padStart(2, '0')}.png`;
         fs.copyFileSync(path.join(smoke, 'out', f), path.join(rdir, name));
-        return { path: rel(name), kind: 'image', label: `${String(i + 1).padStart(2, '0')} · ${i === 0 ? 'Index' : 'Page'}` };
+        return { path: rel(name), kind: 'image', label: `${String(i + 1).padStart(2, '0')} · ${pngs.length === order.length ? order[i] : i === 0 ? 'Index' : 'Page'}` };
       });
     }
     if (!files.length) files = SECTIONS.slice(0, 7).map(([k, ar, en], i) => {
@@ -235,7 +240,12 @@ const BUILDERS = {
     return { summary: '20 slides in one post, caption ready.', files, checks: { slides: 20, posts: 1, cards: 108, overflow: 0 } };
   },
   video({ round, rdir, rel, smoke }) {
-    const files = SECTIONS.slice(0, 5).map(([k, ar, en], i) => {
+    const o169 = smoke && path.join(smoke, 'out169');
+    const real = o169 && fs.existsSync(o169) ? fs.readdirSync(o169).filter((f) => /^s-\d+\.png$/.test(f)).sort() : [];
+    const files = real.length ? real.map((f, i) => {
+      fs.copyFileSync(path.join(o169, f), path.join(rdir, f));
+      return { path: rel(f), kind: 'image', label: `${String(i + 1).padStart(2, '0')} · ${i === 0 ? 'Index' : i === real.length - 1 ? 'App' : 'Slide'}` };
+    }) : SECTIONS.slice(0, 5).map(([k, ar, en], i) => {
       const name = `s-${String(i + 1).padStart(2, '0')}.svg`;
       fs.writeFileSync(path.join(rdir, name), svgPage({ w: 1920, h: 1080, title: i ? ar : 'حديث الأسبوع!', sub: i ? en : 'Index', n: i + 1, note: `16:9 r${round.n}` }), 'utf8');
       return { path: rel(name), kind: 'image', label: `${String(i + 1).padStart(2, '0')} · ${i ? en : 'Index'}` };

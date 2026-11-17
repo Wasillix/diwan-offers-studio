@@ -7,6 +7,14 @@ import * as M from './machine.js';
 import { STAGES, DELIVERABLES, STAGE_KEYS } from './stages.js';
 import { makeTag } from './store.js';
 
+// Starting task list for a new week (playbook §5). Settings will make this editable (Phase 5).
+export const DEFAULT_TASKS = [
+  'Confirm no branch opened or closed',
+  'Check app store links still work',
+  'List missing, low-res or wrong-size photos for the client',
+  'Cover hero: the week\'s biggest saving',
+];
+
 const EDITABLE = ['offer_name', 'kicker_ar', 'kicker_en', 'dates_ar', 'dates_en', 'tag', 'look', 'deliverables', 'tasks'];
 
 export function listLooks(root) {
@@ -52,7 +60,7 @@ export function createApp({ config, store, runner }) {
     paths: { toolkit: config.toolkitDir, imageLibrary: config.imageLibrary, inbox: config.inboxDir, outputs: config.outputsDir, data: config.dataDir },
     busy: runner.active ? { jobId: runner.active.jobId, stage: runner.active.stage } : null, queued: runner.queue.length,
   })));
-  app.get('/api/meta', route(() => ({ stages: STAGES, deliverables: DELIVERABLES, looks: listLooks(config.root) })));
+  app.get('/api/meta', route(() => ({ stages: STAGES, deliverables: DELIVERABLES, looks: listLooks(config.root), defaultTasks: DEFAULT_TASKS, agentMode: config.agentMode })));
 
   // ---- weeks
   app.get('/api/jobs', route(() => store.list().map((j) => {
@@ -202,7 +210,7 @@ export function createApp({ config, store, runner }) {
   // ---- Studio UI
   app.use('/fonts', express.static(path.join(config.toolkitDir, 'fonts')));
   if (fs.existsSync(config.webDir)) {
-    app.use(express.static(config.webDir));
+    app.use(express.static(config.webDir, { setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache') }));
     app.get(/^\/(?!api|files).*/, (req, res) => res.sendFile(path.join(config.webDir, 'index.html')));
   }
   return app;
