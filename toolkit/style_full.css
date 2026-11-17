@@ -123,3 +123,7 @@
 .bstores .store b{font-size:24px}
 .bstores .stores .store+.store{border-left:0;padding-left:24px}
 .bstores .store{border:2px solid rgba(255,255,255,.55)}
+/* v5 – Madani glyphs hang below their line box: give the index sub line and the footer tagline room */
+.hero-t + .sub{margin-top:36px}
+.tag{gap:4px}
+.tag b{line-height:1.3}

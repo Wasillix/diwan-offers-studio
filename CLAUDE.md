@@ -54,8 +54,19 @@ D:\Diwan\005 - FMCG Items\001 - Isolated Items\   Product photo library (read-on
 - `npm run dev`: start server + UI at http://localhost:4321
 - `npm run mock`: same with the mock agent
 - `npm test`: state machine + toolkit smoke tests
+- `npm run test:engine`: state machine, runner + mock agent, HTTP API (~3 s)
 - `npm run smoke`: toolkit only (flyer, carousel, 16:9) for every look in `toolkit/themes/`, builds in `data/smoke/<look>/`
 - `npm run smoke:full`: same plus final PNGs, flattened PDF, mobile HTML and the MP4 (~1 min)
+
+## Engine notes (server/)
+
+- `stages.js` stage table + deliverables → `machine.js` pure transitions (throws `MachineError`) →
+  `runner.js` queue (one agent run at a time), log/SSE events, review.json check → `app.js` API.
+- A stage only advances through `machine.js`. `nextStage` holds while any stage is running, waiting, editing or failed.
+- `cards_changed: true` in a review (edit round, cards or later) sends approved card stages back to pending
+  as `rerun` rounds; reopening an approved stage ≤ cards rebuilds everything after it.
+- Mock agent: `server/agent/mock.js`; uses `data/smoke/<look>` renders when present. `MOCK_FAIL=flyer:1` fails once.
+- Each round's review.json is archived to `review/<stage>/r<n>/review.json` for round history.
 
 ## Toolkit notes
 

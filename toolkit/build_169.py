@@ -113,10 +113,10 @@ CSS = f"""
 .idx.w .hcol{{position:relative;display:flex;flex-direction:column;align-items:flex-start;direction:rtl}}
 .idx.w .itop{{width:100%;flex-direction:row-reverse}}
 .idx.w .ilogo{{height:74px}}
-.idx.w .kicker{{font-size:19px;padding:8px 18px 6px}}
+.idx.w .kicker{{font-size:19px;padding:8px 18px 6px;white-space:nowrap}}
 .idx.w .kicker i{{font-size:15px}}
 .idx.w h1{{font-weight:800;font-size:104px;line-height:1.0;margin-top:22px;text-shadow:0 6px 30px rgba(0,0,0,.18);white-space:nowrap}}
-.idx.w .sub{{text-align:right;margin-top:10px;font-size:16px}}
+.idx.w .sub{{text-align:right;margin-top:30px;font-size:16px}}
 .idx.w .sticker{{margin:24px 6px 0 0;transform:rotate(-3deg);padding:14px 26px 11px}}
 .idx.w .sticker b{{font-size:34px}}
 .idx.w .sticker i{{font-size:17px}}

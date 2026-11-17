@@ -37,7 +37,7 @@ absolute build path as the first argument.
   - `dup=2/3` multipacks, `save_txt` for a client's fixed saving line, `per="200"` to show the 200 g price.
 - Assign sections (`build/sections.json`, defaults in the playbook §5 Phase 3). Drop empty sections.
 - Apply every rule in `diwan-brand-rules` (names, wording, savings).
-- Review: `review/cards/r1/cards.html` table (section, AR, EN, unit, price, saving shown, photo thumbs,
+- Review: `review/cards/r1/cards.json` (kind `table`, row format in review-contract.md: section, AR, EN, unit, price, saving shown, photos,
   codes) + counts (cards, SKUs vs sheet SKUs).
 
 ## 4. flyer

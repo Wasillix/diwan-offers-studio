@@ -5,11 +5,16 @@
   "description": "Local Studio that runs the weekly Diwan Market offers flyer with the Offers Agent.",
   "type": "module",
   "scripts": {
+    "dev": "node server/index.js",
+    "mock": "node server/index.js --mock",
     "test": "node --test test/",
+    "test:engine": "node --test test/machine.test.js test/runner.test.js test/api.test.js",
     "smoke": "node --test test/toolkit.smoke.test.js",
-    "smoke:full": "node --test-concurrency=1 test/toolkit.smoke.test.js --full"
+    "smoke:full": "node test/toolkit.smoke.test.js --full"
   },
   "dependencies": {
+    "express": "^4.21.2",
+    "multer": "^2.0.2",
     "playwright": "^1.56.1"
   }
 }
