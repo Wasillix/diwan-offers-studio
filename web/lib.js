@@ -33,8 +33,8 @@ export const get = (p) => api('GET', p);
 export const post = (p, b) => api('POST', p, b ?? {});
 
 let meta;
-export async function getMeta() {
-  if (!meta) meta = await get('/api/meta');
+export async function getMeta(fresh = false) {
+  if (!meta || fresh) meta = await get('/api/meta');
   return meta;
 }
 

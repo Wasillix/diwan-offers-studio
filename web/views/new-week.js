@@ -29,20 +29,20 @@ const ROLES = [
 ];
 
 export async function newWeekView(root, draftId) {
-  const meta = await getMeta();
+  const meta = await getMeta(true); // fresh: defaults may have changed in Settings
   const weeks = await get('/api/jobs');
   let job = draftId ? await get(`/api/jobs/${draftId}`).catch(() => null) : null;
   if (draftId && (!job || job.status !== 'draft')) { location.hash = job ? `#/week/${job.id}` : '#/new'; return; }
 
   const recent = weeks.filter((w) => w.state !== 'draft').slice(0, 2).map((w) => w.look);
   const state = {
-    offer_name: job?.offer_name || 'Weekend Offers',
-    kicker_ar: job?.kicker_ar || 'عروض نهاية الأسبوع',
-    kicker_en: job?.kicker_en || job?.offer_name || 'Weekend Offers',
+    offer_name: job?.offer_name || meta.defaultOfferName,
+    kicker_ar: job?.kicker_ar || meta.defaultKickerAr,
+    kicker_en: job?.kicker_en || job?.offer_name || meta.defaultOfferName,
     dates_ar: job?.dates_ar || '', dates_en: job?.dates_en || '',
     tag: job?.tag || '', tagAuto: !job || job.tagAuto !== false,
-    look: job?.look || 'classic',
-    deliverables: job?.deliverables || meta.deliverables.map((d) => d.key),
+    look: job?.look || meta.defaultLook,
+    deliverables: job?.deliverables || meta.defaultDeliverables,
     tasks: (job?.tasks?.length ? job.tasks : meta.defaultTasks).join('\n'),
     files: { sheet: [], produce: [], images: [] }, // File objects not uploaded yet
   };

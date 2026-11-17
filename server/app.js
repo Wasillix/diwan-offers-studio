@@ -7,13 +7,10 @@ import * as M from './machine.js';
 import { STAGES, DELIVERABLES, STAGE_KEYS } from './stages.js';
 import { makeTag } from './store.js';
 
-// Starting task list for a new week (playbook §5). Settings will make this editable (Phase 5).
-export const DEFAULT_TASKS = [
-  'Confirm no branch opened or closed',
-  'Check app store links still work',
-  'List missing, low-res or wrong-size photos for the client',
-  'Cover hero: the week\'s biggest saving',
-];
+import { DEFAULT_TASKS } from './settings.js';
+import { toolChecks, folderChecks, authStatus } from './system.js';
+
+export { DEFAULT_TASKS };
 
 const EDITABLE = ['offer_name', 'kicker_ar', 'kicker_en', 'dates_ar', 'dates_en', 'tag', 'look', 'deliverables', 'tasks'];
 
@@ -29,7 +26,8 @@ export function listLooks(root) {
   });
 }
 
-export function createApp({ config, store, runner }) {
+/** settings, notifier, scheduler, inbox, startup and onAgentMode are optional (tests run without them). */
+export function createApp({ config, store, runner, settings, notifier, scheduler, inbox, startup, onAgentMode }) {
   const app = express();
   app.use(express.json({ limit: '2mb' }));
   const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 200 * 1024 * 1024 } });
@@ -60,7 +58,54 @@ export function createApp({ config, store, runner }) {
     paths: { toolkit: config.toolkitDir, imageLibrary: config.imageLibrary, inbox: config.inboxDir, outputs: config.outputsDir, data: config.dataDir },
     busy: runner.active ? { jobId: runner.active.jobId, stage: runner.active.stage } : null, queued: runner.queue.length,
   })));
-  app.get('/api/meta', route(() => ({ stages: STAGES, deliverables: DELIVERABLES, looks: listLooks(config.root), defaultTasks: DEFAULT_TASKS, agentMode: config.agentMode })));
+  app.get('/api/meta', route(() => {
+    const nw = settings?.get().newWeek;
+    return {
+      stages: STAGES, deliverables: DELIVERABLES, looks: listLooks(config.root), agentMode: config.agentMode,
+      defaultTasks: nw?.tasks || DEFAULT_TASKS, defaultDeliverables: nw?.deliverables || DELIVERABLES.map((d) => d.key),
+      defaultLook: nw?.look || 'classic', defaultOfferName: nw?.offerName || 'Weekend Offers', defaultKickerAr: nw?.kickerAr || 'عروض نهاية الأسبوع',
+    };
+  }));
+
+  // ---- settings
+  const need = (x, what) => { if (!x) throw Object.assign(new Error(`${what} isn't available`), { code: 501 }); return x; };
+  const settingsView = () => ({
+    settings: settings.get(),
+    nextReminder: scheduler?.nextRun() || null,
+    startup: startup?.status() || { enabled: false, supported: false },
+    telegramConfigured: !!notifier?.telegramConfigured(),
+    agentModeForced: process.argv.includes('--mock'),
+    folders: folderChecks(settings.get().paths),
+    auth: authStatus(store),
+    recentNotifications: notifier?.sent.slice(0, 5) || [],
+  });
+  app.get('/api/settings', route(() => { need(settings, 'Settings'); return settingsView(); }));
+  app.get('/api/settings/checks', route((req) => toolChecks({ refresh: req.query.refresh === '1' })));
+  app.put('/api/settings', route((req) => {
+    need(settings, 'Settings');
+    const before = settings.get();
+    const patch = { ...(req.body || {}) };
+    if (patch.schedule) delete patch.schedule.lastFired; // only the scheduler sets this
+    const after = settings.update(patch);
+    if (JSON.stringify(before.paths) !== JSON.stringify(after.paths) || before.inbox.enabled !== after.inbox.enabled) inbox?.start();
+    if (before.agent.mode !== after.agent.mode) onAgentMode?.(after.agent.mode);
+    return settingsView();
+  }));
+  app.post('/api/settings/startup', route((req) => {
+    need(startup, 'Start with Windows');
+    return req.body?.enabled ? startup.enable() : startup.disable();
+  }));
+  app.post('/api/settings/test-notification', route(async () => need(notifier, 'Notifications').send({
+    kind: 'test', title: 'Test from Offers Studio', body: 'Notifications are working. This is what you\'ll see when a stage is ready for review.', url: '#/settings',
+  }, { force: true })));
+  app.post('/api/settings/scan-inbox', route(async () => {
+    const jobs = await need(inbox, 'The inbox watcher').scan();
+    return { created: jobs.map((j) => ({ id: j.id, offer_name: j.offer_name, dates_en: j.dates_en })) };
+  }));
+  app.post('/api/settings/run-reminder', route(() => {
+    const job = need(scheduler, 'The reminder').fire(new Date().toISOString().slice(0, 10));
+    return { job: job ? { id: job.id, dates_en: job.dates_en } : null };
+  }));
 
   // ---- weeks
   app.get('/api/jobs', route(() => store.list().map((j) => {
@@ -183,18 +228,20 @@ export function createApp({ config, store, runner }) {
   }));
 
   // ---- live updates (SSE): /api/events (all weeks) and /api/jobs/:id/events (one week + its log)
-  const sse = (req, res, filter) => {
+  const sse = (req, res, filter, global = false) => {
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
     res.write('retry: 2000\n\n');
     const send = (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
     const onJob = (job) => { if (filter(job.id)) send('job', view(job)); };
     const onLog = (id, e) => { if (filter(id)) send('log', { jobId: id, ...e }); };
     const onRemoved = (id) => { if (filter(id)) send('removed', { id }); };
+    const onNotify = (n) => send('notify', n);
     runner.on('job', onJob); runner.on('log', onLog); runner.on('removed', onRemoved);
+    if (global) notifier?.on('notify', onNotify);
     const ping = setInterval(() => res.write(': ping\n\n'), 25_000);
-    req.on('close', () => { clearInterval(ping); runner.off('job', onJob); runner.off('log', onLog); runner.off('removed', onRemoved); });
+    req.on('close', () => { clearInterval(ping); runner.off('job', onJob); runner.off('log', onLog); runner.off('removed', onRemoved); notifier?.off('notify', onNotify); });
   };
-  app.get('/api/events', (req, res) => sse(req, res, () => true));
+  app.get('/api/events', (req, res) => sse(req, res, () => true, true));
   app.get('/api/jobs/:id/events', (req, res) => sse(req, res, (id) => id === req.params.id));
 
   // ---- files in a job folder (review images, PDFs, mobile HTML…)

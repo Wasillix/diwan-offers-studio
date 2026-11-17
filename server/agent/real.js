@@ -69,14 +69,15 @@ function environmentNotes({ jobDir, root, config }) {
 - No web access. If something is missing, ask in review.json questions instead of guessing.`;
 }
 
-export function createRealAgent(config) {
-  const model = process.env.AGENT_MODEL || 'claude-opus-5-5';
-  const effort = process.env.AGENT_EFFORT || 'high';
-  const maxBudgetUsd = +(process.env.AGENT_MAX_BUDGET_USD || 15);
+/** `agentSettings()` returns { model, effort, maxBudgetUsd } (from Settings); read at the start of every run. */
+export function createRealAgent(config, agentSettings = () => ({})) {
   return {
     mode: 'real',
-    model,
     async run({ job, stage, round, prompt, resume, sessionId, jobDir, signal, onMessage = () => {} }) {
+      const a = agentSettings() || {};
+      const model = a.model || process.env.AGENT_MODEL || 'claude-opus-5-5';
+      const effort = a.effort || process.env.AGENT_EFFORT || 'high';
+      const maxBudgetUsd = +(a.maxBudgetUsd || process.env.AGENT_MAX_BUDGET_USD || 15);
       const abortController = new AbortController();
       signal?.addEventListener('abort', () => abortController.abort(), { once: true });
       const stderr = [];

@@ -83,6 +83,20 @@ D:\Diwan\005 - FMCG Items\001 - Isolated Items\   Product photo library (read-on
 - `node test/agent-probe.mjs` (cents) checks auth, skills and PYTHONUTF8. `node test/dry-run-intake.mjs`
   runs intake on the 6–9 Nov sheet rebuilt by `test/fixtures/make_sheet.py`.
 
+## Recurring + notifications (Phase 5)
+
+- `settings.js`: data/settings.json merged over defaults (paths, new-week defaults, schedule, inbox,
+  notifications, agent). Paths apply to the running config; agent mode switches live (`--mock` wins).
+- `inbox.js`: watches the Offers Inbox (fs.watch + 60 s scan); a new .xlsx → draft week (name/dates from the
+  file name via `dates.js`), never auto-confirmed, inbox files never touched; data/inbox.json remembers files.
+- `scheduler.js`: Monday 10:00 Asia/Beirut by default; fires once per day at or after the time; draft for
+  the coming Friday–Monday unless one with those dates exists.
+- `notify.js`: Windows toast via PowerShell + WinRT (no install; clicking opens the week), browser
+  notifications over SSE `notify` events, optional Telegram from .env. `watchTransitions` notifies on
+  review / question / failed / done. (Spawning PowerShell fails with EPERM inside Claude Code's sandbox; fine
+  when the server runs normally.)
+- `startup.js`: Start with Windows = one .vbs launcher in the user's Startup folder (Settings toggle only).
+
 ## Studio UI notes (web/)
 
 - Plain ES modules, no build: `app.js` (hash router) → `views/weeks.js`, `views/new-week.js`, `views/week.js`,

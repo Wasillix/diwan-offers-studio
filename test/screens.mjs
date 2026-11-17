@@ -53,4 +53,8 @@ if (late) {
   await shot('11-video', `#/week/${late}/video`);
 }
 if (failed) await shot('12-failed-stage', `#/week/${failed}/images`);
+await shot('14-settings', '#/settings');
+await shot('15-settings-lower', '#/settings', async () => { await p.evaluate(() => window.scrollTo(0, document.body.scrollHeight)); });
+const inboxDraft = jobs.find((j) => j.source === 'inbox' && j.state === 'draft')?.id;
+if (inboxDraft) await shot('16-inbox-draft', `#/new/${inboxDraft}`);
 await b.close();

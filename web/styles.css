@@ -319,3 +319,32 @@ table.cards .codes{color:var(--mute);font-size:12px}
   .phone{width:100%;max-width:390px}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ---------- settings */
+.settings{max-width:880px}
+.set-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px}
+.set-head h2{margin:0}
+.set-note{color:var(--ink-2);font-size:14px;margin:0 0 12px;max-width:68ch}
+.set-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line-2);font-size:13.5px}
+.path{font-weight:600;word-break:break-all}
+.row3{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:14px}
+.checks-1{grid-template-columns:1fr}
+.switch{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;color:var(--ink-2);cursor:pointer}
+.switch input{appearance:none;width:38px;height:22px;border-radius:999px;background:var(--line);position:relative;cursor:pointer;margin:0;transition:background .15s}
+.switch input::after{content:"";position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;top:3px;left:3px;transition:left .15s;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.switch input:checked{background:var(--ok)}
+.switch input:checked::after{left:19px}
+.switch input:disabled{opacity:.4;cursor:not-allowed}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg-opt{border:1.5px solid var(--line);border-radius:var(--r);padding:12px 14px;cursor:pointer;display:flex;flex-direction:column;gap:3px}
+.seg-opt input{position:absolute;opacity:0;pointer-events:none}
+.seg-opt.on{border-color:var(--ink);box-shadow:0 0 0 3px rgba(28,34,48,.08)}
+.seg-opt span{font-size:13px;color:var(--mute)}
+.seg-opt:focus-within{outline:2px solid var(--run);outline-offset:2px}
+.kv{display:flex;justify-content:space-between;gap:16px;padding:8px 0;border-top:1px solid var(--line-2);font-size:14px}
+.kv span:first-child{color:var(--ink-2);white-space:nowrap}
+.kv span:last-child{text-align:right;color:var(--ink)}
+.ok-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;vertical-align:1px}
+.ok-dot.yes{background:var(--ok)}
+.ok-dot.no{background:var(--mark)}
+@media (max-width:700px){.row3,.seg{grid-template-columns:1fr}.kv{flex-direction:column;gap:2px}.kv span:last-child{text-align:left}}

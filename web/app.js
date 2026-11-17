@@ -3,6 +3,8 @@ import { $, $$, getMeta } from './lib.js';
 import { weeksView } from './views/weeks.js';
 import { newWeekView } from './views/new-week.js';
 import { weekView } from './views/week.js';
+import { settingsView } from './views/settings.js';
+import { listen } from './lib.js';
 
 const view = $('#view');
 let teardown = null;
@@ -11,7 +13,18 @@ const routes = [
   [/^#?\/?$/, () => weeksView(view), 'weeks'],
   [/^#\/new(?:\/([\w-]+))?$/, (m) => newWeekView(view, m[1]), 'new'],
   [/^#\/week\/([\w-]+)(?:\/(\w+))?$/, (m) => weekView(view, m[1], m[2]), 'week'],
+  [/^#\/settings$/, () => settingsView(view), 'settings'],
 ];
+
+// Browser notifications while the Studio is open (Settings → Notifications). The server decides what's
+// worth a notification; this only shows it, and only when the tab isn't the one in front.
+listen('/api/events', {
+  notify: (n) => {
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted' || document.visibilityState === 'visible') return;
+    const note = new Notification(n.title, { body: n.body, tag: n.url });
+    note.onclick = () => { window.focus(); location.hash = n.url.split('/').slice(3).join('/') || '#/'; note.close(); };
+  },
+});
 
 async function render() {
   if (teardown) { try { teardown(); } catch { /* ignore */ } teardown = null; }
