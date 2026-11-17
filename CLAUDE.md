@@ -68,6 +68,21 @@ D:\Diwan\005 - FMCG Items\001 - Isolated Items\   Product photo library (read-on
 - Mock agent: `server/agent/mock.js`; uses `data/smoke/<look>` renders when present. `MOCK_FAIL=flyer:1` fails once.
 - Each round's review.json is archived to `review/<stage>/r<n>/review.json` for round history.
 
+## Real agent notes (server/agent/real.js)
+
+- One stage round = one Agent SDK `query()`. **cwd is the repo root** (so `settingSources: ['project']` loads
+  this file + `.claude/skills`, and standing-rule edits land in the real `diwan-brand-rules`); the job folder,
+  photo library and logos folder come in via `additionalDirectories`; the prompt uses absolute job paths.
+  The agent's system prompt (appended) tells it this file's build rules aren't for it.
+- The init message must list `diwan-offers-pipeline`, `diwan-brand-rules`, `diwan-design-review`, or the
+  run aborts. Each round stores `agent: {model, apiKeySource, skills}` in job.json.
+- Permissions: Read/Glob/Grep/TodoWrite pre-approved; `canUseTool` allows Write/Edit only in the job folder
+  or `diwan-brand-rules`, Bash except changes to the photo library or git; Web*, PowerShell, subagents removed.
+- Env: `AGENT_MODEL` (default `claude-opus-5-5`), `AGENT_EFFORT` (default `high`), `AGENT_MAX_BUDGET_USD`
+  (default 15 per run). Auth: Claude Code login unless `ANTHROPIC_API_KEY` is set in `.env`.
+- `node test/agent-probe.mjs` (cents) checks auth, skills and PYTHONUTF8. `node test/dry-run-intake.mjs`
+  runs intake on the 6–9 Nov sheet rebuilt by `test/fixtures/make_sheet.py`.
+
 ## Studio UI notes (web/)
 
 - Plain ES modules, no build: `app.js` (hash router) → `views/weeks.js`, `views/new-week.js`, `views/week.js`,

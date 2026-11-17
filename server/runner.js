@@ -6,6 +6,11 @@ import { promptFor } from './prompts.js';
 import { readAndValidate } from './review.js';
 import { STAGE_KEYS } from './stages.js';
 
+const agentInfo = (init) => ({
+  model: init.model, apiKeySource: init.apiKeySource, version: init.version,
+  skills: (init.skills || []).filter((s) => s.startsWith('diwan-')),
+});
+
 export class Runner extends EventEmitter {
   constructor({ store, agent }) {
     super();
@@ -121,6 +126,7 @@ export class Runner extends EventEmitter {
       });
     } catch (e) {
       error = controller.signal.aborted ? 'Cancelled' : (e?.message || String(e));
+      result = { sessionId: e?.sessionId, cost: e?.cost || 0 }; // a failed real run still costs money
     }
     const fresh = this.store.get(jobId); // the API may have changed other fields meanwhile
     if (!error) {
@@ -129,6 +135,7 @@ export class Runner extends EventEmitter {
       else {
         this.store.archiveReview(jobId, stage, round.n, v.review);
         const reruns = M.finishRun(fresh, stage, { review: v.review, sessionId: result?.sessionId, cost: result?.cost });
+        if (result?.init) fresh.stages[stage].rounds.at(-1).agent = agentInfo(result.init);
         this._log(jobId, { type: 'app', stage, round: round.n, text: `■ ${stage} round ${round.n} ready for review` });
         if (reruns.length) this._log(jobId, { type: 'app', stage, text: `Cards changed: ${reruns.join(', ')} will rebuild` });
       }
@@ -139,6 +146,10 @@ export class Runner extends EventEmitter {
       M.failRun(fresh, stage, error);
       fresh.stages[stage].lastLog = tail;
       if (result?.sessionId) fresh.stages[stage].sessionId = result.sessionId;
+      if (result?.cost) {
+        fresh.stages[stage].rounds.at(-1).cost = +(((fresh.stages[stage].rounds.at(-1).cost) || 0) + result.cost).toFixed(4);
+        fresh.cost = +((fresh.cost || 0) + result.cost).toFixed(4);
+      }
       this._log(jobId, { type: 'error', stage, round: round.n, text: error });
     }
     this._save(fresh);
