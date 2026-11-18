@@ -64,6 +64,8 @@ composition, but nothing in this file. When the client adds a rule or corrects a
 ## QA greps (run on every HTML output before submitting)
 
 Must find nothing: `ديواني`, `مجلّد`, `مجلد`, `أصلي`, `بلوك`, `Privé`, `Prive`, `QR`, `qr-`.
+In standalone files (the mobile HTML), strip embedded `data:...;base64,...` first: base64 images and fonts
+contain "QR" by chance.
 Must find: the week's `dates_ar` and `dates_en` on the cover/index, closing page, caption and closing slide;
 `@diwan.market`; both app links.
 Counts: cards in HTML == cards in `cards2.py`; SKUs on cards == SKUs in the sheet (minus removed items).

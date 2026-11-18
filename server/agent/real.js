@@ -30,16 +30,17 @@ export function toolLine(name, input = {}, jobDir) {
 }
 
 /** Permission guard: what the agent may change. Read-only tools are pre-approved and never reach here. */
-export function makeGuard({ jobDir, root, imageLibrary }) {
+export function makeGuard({ jobDir, root, imageLibrary, extraWrite = [] }) {
   const rulesDir = path.join(root, '.claude', 'skills', 'diwan-brand-rules');
+  const writable = [jobDir, rulesDir, ...extraWrite];
   const lib = imageLibrary.replace(/[\\/]+$/, '');
   const libName = path.basename(path.dirname(lib)); // "005 - FMCG Items"
   return async (toolName, input) => {
     if (NEVER.includes(toolName)) return { behavior: 'deny', message: `${toolName} is not available to the Offers Agent.` };
     if (['Write', 'Edit', 'MultiEdit'].includes(toolName)) {
       const p = input.file_path || '';
-      if (inside(p, jobDir) || inside(p, rulesDir)) return { behavior: 'allow', updatedInput: input };
-      return { behavior: 'deny', message: `Write only inside the job folder (${jobDir}) or .claude/skills/diwan-brand-rules. ${p} is outside.` };
+      if (writable.some((d) => inside(p, d))) return { behavior: 'allow', updatedInput: input };
+      return { behavior: 'deny', message: `Write only inside the job folder (${jobDir})${extraWrite.length ? `, ${extraWrite.join(', ')}` : ''} or .claude/skills/diwan-brand-rules. ${p} is outside.` };
     }
     if (toolName === 'Bash') {
       const c = String(input.command || '');
@@ -65,7 +66,7 @@ function environmentNotes({ jobDir, root, config }) {
 - Python: \`${pyCmd}\` (PYTHONUTF8=1 is already set). Node scripts: \`node "${path.join(jobDir, 'build')}\\<script>.js" "${path.join(jobDir, 'build')}"\`.
 - Paths contain spaces: always quote them.
 - Product photo library (read-only): ${config.imageLibrary}. Diwan logos: ${config.logosDir}.
-- You may only write inside the job folder, and to ${path.join(root, '.claude', 'skills', 'diwan-brand-rules', 'SKILL.md')} for standing rules.
+- You may only write inside the job folder, and to ${path.join(root, '.claude', 'skills', 'diwan-brand-rules', 'SKILL.md')} for standing rules. In the delivery stage also ${path.join(config.outputsDir, '<TAG>')} and the app's toolkit/img, img_pdf, canvas_assets (to promote new cut-outs).
 - No web access. If something is missing, ask in review.json questions instead of guessing.`;
 }
 
@@ -81,7 +82,11 @@ export function createRealAgent(config, agentSettings = () => ({})) {
       const abortController = new AbortController();
       signal?.addEventListener('abort', () => abortController.abort(), { once: true });
       const stderr = [];
-      const extraDirs = [jobDir, config.imageLibrary, config.logosDir].filter((d) => d && fs.existsSync(d));
+      // delivery copies finals to Claude outputs\<TAG>\ and promotes new cut-outs into the app's toolkit/img*
+      const deliveryDirs = stage === 'delivery'
+        ? [path.join(config.outputsDir, job.tag), ...['img', 'img_pdf', 'canvas_assets'].map((d) => path.join(config.toolkitDir, d))]
+        : [];
+      const extraDirs = [jobDir, config.imageLibrary, config.logosDir, ...(stage === 'delivery' ? [config.outputsDir] : [])].filter((d) => d && fs.existsSync(d));
       const q = query({
         prompt,
         options: {
@@ -92,7 +97,7 @@ export function createRealAgent(config, agentSettings = () => ({})) {
           // no bare allowedTools: every call, read-only ones included, goes through canUseTool (which allows them)
           allowedTools: [],
           disallowedTools: NEVER,
-          canUseTool: makeGuard({ jobDir, root: config.root, imageLibrary: config.imageLibrary }),
+          canUseTool: makeGuard({ jobDir, root: config.root, imageLibrary: config.imageLibrary, extraWrite: deliveryDirs }),
           permissionMode: 'default',
           systemPrompt: { type: 'preset', preset: 'claude_code', append: environmentNotes({ jobDir, root: config.root, config }) },
           model,
