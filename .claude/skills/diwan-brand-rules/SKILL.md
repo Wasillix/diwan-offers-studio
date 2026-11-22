@@ -36,7 +36,15 @@ composition, but nothing in this file. When the client adds a rule or corrects a
 - Different-price variants on one card → **ابتداءً من** + lowest price.
 - Same-price variants → one card showing all flavour photos.
 - Multipacks repeat the pack photo back to back (x2, x3).
-- Currency after the number: `12.99$` / `44.999L.L.`. L.L. only on produce.
+- Bundles (item + add-on, e.g. kashkaval + baguette): one combined photo, the add-on in front of the
+  main pack, keeping the main pack's brand name readable, and the whole group centred in the frame.
+- Currency after the number: `12.99$` / `44.999L.L` (L.L prints with no closing dot, as the toolkit does;
+  Waseem, Nov 2026).
+- No price from the client (e.g. "15% off, no price"): the card shows the saving badge and the unit only.
+  Drop the price block completely; never print the `X.XX` price placeholder. (Waseem, Nov 2026)
+- Currency and unit follow the client's price sheet: if the sheet gives an item in L.L. (produce, and
+  fresh-counter chicken, meat and cheese, e.g. `550.000L.L` per kg), show L.L.; otherwise $. The card's
+  unit is the one the sheet prices (e.g. cheddar priced per 200 g → «200 غ», not 1 كغ). (Waseem, Nov 2026)
 
 ## Brand and CTA
 
@@ -69,3 +77,4 @@ contain "QR" by chance.
 Must find: the week's `dates_ar` and `dates_en` on the cover/index, closing page, caption and closing slide;
 `@diwan.market`; both app links.
 Counts: cards in HTML == cards in `cards2.py`; SKUs on cards == SKUs in the sheet (minus removed items).
+No price placeholders: `"pi">X<` and `price ph` must find nothing.

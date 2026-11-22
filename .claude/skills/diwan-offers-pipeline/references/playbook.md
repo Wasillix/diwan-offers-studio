@@ -93,7 +93,7 @@ These come from client feedback. Add new standing rules here as they come up.
 - Variants with different prices go on one card showing **ابتداءً من** and the lowest price.
 - Variants with the same price share one card that shows all the flavour photos.
 - Multipacks repeat the pack photo back to back (x2, x3).
-- Currency follows the number: `12.99$` / `44.999L.L.`
+- Currency follows the number: `12.99$` / `44.999L.L` (no closing dot)
 
 **Brand and CTA**
 - **No Diwan Privé** and **no QR code** unless the client asks for them again.
@@ -237,7 +237,7 @@ Previous offers' artifacts (mobile page, Design canvas) can be updated in place 
 ## 7. QA checklist (before anything goes out)
 
 - [ ] Every sheet item appears on a card, and the card and SKU counts match the sheet.
-- [ ] Every price has the right currency; L.L. only on produce.
+- [ ] Every price has the right currency; L.L. where the sheet prices in L.L. (see brand rules), else $.
 - [ ] No saving badge under 10%; fixed saving lines appear where the client asked for them.
 - [ ] No ديواني, مجلّدات, أصلي, بلوك, Privé or QR anywhere (search the HTML).
 - [ ] The dates are correct on every page, the cover, the caption and the closing slide.
