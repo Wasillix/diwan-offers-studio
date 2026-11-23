@@ -9,7 +9,7 @@ import { guessFromFileName, upcomingWeekend, zonedParts } from '../server/dates.
 import { Settings } from '../server/settings.js';
 import { InboxWatcher } from '../server/inbox.js';
 import { Scheduler } from '../server/scheduler.js';
-import { Notifier, toastScript, watchTransitions } from '../server/notify.js';
+import { Notifier, toastXml, TOAST_SCRIPT, watchTransitions } from '../server/notify.js';
 import { Startup, launcherScript } from '../server/startup.js';
 import * as M from '../server/machine.js';
 import { makeEnv } from './helpers.js';
@@ -126,7 +126,11 @@ test('notifications: channels, per-event switches, toast script, state changes',
   assert.equal(calls.find((c) => c[0] === 'fetch')[2].chat_id, '42');
   e.settings.update({ notifications: { on: { review: false } } });
   assert.ok((await n.send({ kind: 'review', title: 'x', body: 'y' })).skipped);
-  const xml = toastScript({ title: 'حلّوم <روابي> & co', body: 'b', url: 'http://localhost:4321/#/week/a' });
+  const xml = toastXml({ title: 'حلّوم <روابي> & co', body: 'b', url: 'http://localhost:4321/#/week/a' });
+  assert.doesNotMatch(TOAST_SCRIPT, /[^ -]/, 'the PowerShell script stays ASCII; text goes in TOAST_XML');
+  assert.doesNotMatch(TOAST_SCRIPT, /EncodedCommand|WindowStyle/);
+  assert.equal(calls[0][0], 'powershell.exe');
+  assert.deepEqual(calls[0][1], ['-NoProfile', '-NonInteractive', '-Command', '-'], 'script through stdin: no -EncodedCommand, no hidden-window flag');
   assert.match(xml, /حلّوم &lt;روابي&gt; &amp; co/);
   assert.match(xml, /launch="http:\/\/localhost:4321\/#\/week\/a"/);
 

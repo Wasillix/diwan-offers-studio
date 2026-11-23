@@ -134,4 +134,9 @@ It's a raw log; this file is the summary to work from.
   Tested end to end against a local copy of the repo. The code is on the private repo
   github.com/Wasillix/diwan-offers-studio (`master`), with the cut-out pack on its `assets` branch (384 files).
   Installers need a GitHub account added as a collaborator.
+- **Antivirus false alarm fixed**: on the first install from GitHub Kaspersky flagged `server\index.js`
+  (PDM:Trojan.Win32.Generic) and removed it, because the server showed a toast through a hidden, encoded
+  PowerShell. Toasts and the folder picker now feed PowerShell through stdin (`server/powershell.js`), and the
+  shortcut launches through plain Node (`scripts/open-studio.mjs`). Not yet re-tested under Kaspersky with a
+  real toast.
 - Next on the list: the client-feedback ideas.

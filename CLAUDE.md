@@ -71,8 +71,13 @@ D:\Diwan\005 - FMCG Items\001 - Isolated Items\   Product photo library (read-on
   cut-out pack, shortcuts, Claude sign-in. Never touches `data/` or `.env` values.
 - `scripts/update.ps1`: refuses on local changes or local commits, `git merge --ff-only`, stops the server
   (node processes running this folder's `server/index.js`) and starts it again.
-- `scripts/open-studio.ps1` via `scripts/Open Studio.vbs` (shortcut target, no window): start if not
-  running, wait for `/api/meta`, open the browser. Error box closes itself after 2 minutes.
+- `scripts/open-studio.mjs` via `scripts/Open Studio.vbs` (shortcut target, no window): plain Node, starts
+  the server detached if `/api/meta` doesn't answer, opens the browser; `--no-browser` for Update. On failure
+  it writes `data/launch-error.txt` and the .vbs shows it (closes itself after 2 minutes).
+- Antivirus: Kaspersky (PDM:Trojan.Win32.Generic, 23 Nov 2026) removed `server/index.js` after the server
+  showed a toast through `powershell -WindowStyle Hidden -EncodedCommand`. Never start PowerShell from the
+  server or launcher with -EncodedCommand, -WindowStyle Hidden or -ExecutionPolicy Bypass. Use
+  `server/powershell.js` (`runPowerShell`: script through stdin, ASCII only, values in env vars).
 - Cut-out pack: orphan branch `assets` (`img/`, `img_pdf/`, `canvas_assets/`), fetched with `--depth 1`
   and copied in new-files-only. `scripts/publish-assets.ps1` adds new files to it from a PC.
 - Scripts run in Windows PowerShell 5.1: keep them ASCII (BOM-less files are read as ANSI) and CRLF

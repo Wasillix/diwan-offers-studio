@@ -5,6 +5,7 @@ import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { detectPython } from './toolkit.js';
+import { runPowerShell } from './powershell.js';
 
 const require = createRequire(import.meta.url);
 const run = (cmd, args) => { const r = spawnSync(cmd, args, { encoding: 'utf8', timeout: 15000, windowsHide: true }); return r.status === 0 ? (r.stdout || r.stderr).trim() : null; };
@@ -39,35 +40,30 @@ export function folderChecks(paths) {
  */
 export function pickFolder({ initial = '', title = 'Choose a folder', spawnImpl = spawn, timeoutMs = 10 * 60_000 } = {}) {
   if (process.platform !== 'win32') return Promise.reject(Object.assign(new Error('The folder picker only works on Windows. Type the path instead.'), { code: 501 }));
-  const script = `
-[Console]::OutputEncoding = [Text.Encoding]::UTF8
-Add-Type -AssemblyName System.Windows.Forms
-$owner = New-Object System.Windows.Forms.Form
-$owner.TopMost = $true; $owner.ShowInTaskbar = $false; $owner.StartPosition = 'Manual'
-$owner.Location = New-Object System.Drawing.Point(-3000, -3000); $owner.Size = New-Object System.Drawing.Size(1, 1)
-$owner.Show(); $owner.Activate()
-$d = New-Object System.Windows.Forms.FolderBrowserDialog
-$d.Description = $env:PICK_TITLE
-$d.ShowNewFolderButton = $true
-if ($env:PICK_INITIAL -and (Test-Path -LiteralPath $env:PICK_INITIAL)) { $d.SelectedPath = $env:PICK_INITIAL }
-if ($d.ShowDialog($owner) -eq [System.Windows.Forms.DialogResult]::OK) { Write-Output $d.SelectedPath }
-$owner.Close()`;
-  const enc = Buffer.from(script, 'utf16le').toString('base64');
-  return new Promise((resolve, reject) => {
-    const p = spawnImpl('powershell.exe', ['-NoProfile', '-NonInteractive', '-STA', '-EncodedCommand', enc], {
-      windowsHide: true, env: { ...process.env, PICK_TITLE: String(title).slice(0, 200), PICK_INITIAL: String(initial || '') },
-    });
-    let out = '', errText = '';
-    const timer = setTimeout(() => { p.kill(); resolve(null); }, timeoutMs);
-    p.stdout?.on('data', (d) => { out += d; });
-    p.stderr?.on('data', (d) => { errText += d; });
-    p.on('error', (e) => { clearTimeout(timer); reject(Object.assign(new Error(`Couldn't open the folder picker (${e.code || e.message}). Type the path instead.`), { code: 500 })); });
-    p.on('close', (code) => {
-      clearTimeout(timer);
-      if (code !== 0) return reject(Object.assign(new Error(`The folder picker failed: ${errText.trim().split('\n')[0] || `exit ${code}`}. Type the path instead.`), { code: 500 }));
-      resolve(out.trim().split(/\r?\n/).pop() || null);
-    });
-  });
+  // ASCII, one statement per line, values from env vars (see powershell.js). The result line is tagged so
+  // nothing else PowerShell prints can be mistaken for the path.
+  const script = [
+    '[Console]::OutputEncoding = [Text.Encoding]::UTF8',
+    'Add-Type -AssemblyName System.Windows.Forms',
+    '$owner = New-Object System.Windows.Forms.Form',
+    "$owner.TopMost = $true; $owner.ShowInTaskbar = $false; $owner.StartPosition = 'Manual'",
+    '$owner.Location = New-Object System.Drawing.Point(-3000, -3000); $owner.Size = New-Object System.Drawing.Size(1, 1)',
+    '$owner.Show(); $owner.Activate()',
+    '$d = New-Object System.Windows.Forms.FolderBrowserDialog',
+    '$d.Description = $env:PICK_TITLE; $d.ShowNewFolderButton = $true',
+    'if ($env:PICK_INITIAL -and (Test-Path -LiteralPath $env:PICK_INITIAL)) { $d.SelectedPath = $env:PICK_INITIAL }',
+    "if ($d.ShowDialog($owner) -eq [System.Windows.Forms.DialogResult]::OK) { Write-Output ('PICKED:' + $d.SelectedPath) }",
+    '$owner.Close()',
+  ].join('\n');
+  return runPowerShell(script, {
+    sta: true, timeoutMs, spawnImpl, env: { PICK_TITLE: String(title).slice(0, 200), PICK_INITIAL: String(initial || '') },
+  }).then((r) => {
+    if (r.timedOut) return null;
+    const picked = r.out.split(/\r?\n/).find((l) => l.startsWith('PICKED:'));
+    if (picked) return picked.slice(7).trim() || null;
+    if (r.code !== 0 || r.err.trim()) throw Object.assign(new Error(`The folder picker failed: ${r.err.trim().split('\n')[0] || `exit ${r.code}`}. Type the path instead.`), { code: 500 });
+    return null; // cancelled
+  }, (e) => { throw Object.assign(new Error(`Couldn't open the folder picker (${e.code || e.message}). Type the path instead.`), { code: 500 }); });
 }
 
 /** How the real agent authenticates. Never returns secrets. */

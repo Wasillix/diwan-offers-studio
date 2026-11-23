@@ -45,8 +45,8 @@ try {
 
   if ($restart) {
     Step 'Starting the Studio again'
-    $null = Start-Studio
-    if (Wait-StudioUp $port) { Say "Running at http://localhost:$port" Green } else { Say 'It did not start within 30 s. See data\server.log.' Yellow }
+    & node (Join-Path $PSScriptRoot 'open-studio.mjs') --no-browser
+    if ($LASTEXITCODE -eq 0) { Say "Running at http://localhost:$port" Green } else { Say 'It did not start. Open it from the shortcut, or see data\server.log.' Yellow }
   }
   Write-Host ''
   Write-Host 'Update finished.' -ForegroundColor Green

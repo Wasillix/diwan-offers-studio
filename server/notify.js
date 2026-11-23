@@ -5,23 +5,28 @@ import { spawn } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import * as M from './machine.js';
 import { stageDef } from './stages.js';
+import { runPowerShell } from './powershell.js';
 
 const xml = (s) => String(s ?? '').replace(/[<>&"']/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' }[c]));
 // Windows PowerShell's own AppUserModelID: toasts show under "Windows PowerShell" without registering an app.
 const APP_ID = '{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\\WindowsPowerShell\\v1.0\\powershell.exe';
 
-export function toastScript({ title, body, url }) {
-  const t = `<toast activationType="protocol" launch="${xml(url)}" duration="long"><visual><binding template="ToastGeneric">`
+/** The toast's XML (escaped; may hold Arabic). It reaches PowerShell in the TOAST_XML env var. */
+export function toastXml({ title, body, url }) {
+  return `<toast activationType="protocol" launch="${xml(url)}" duration="long"><visual><binding template="ToastGeneric">`
     + `<text>${xml(title)}</text><text>${xml(body)}</text><text placement="attribution">Diwan Offers Studio</text></binding></visual>`
     + `<actions><action content="Open" activationType="protocol" arguments="${xml(url)}"/></actions></toast>`;
-  return `[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
-[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
-$x = New-Object Windows.Data.Xml.Dom.XmlDocument
-$x.LoadXml(@'
-${t}
-'@)
-[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('${APP_ID}').Show((New-Object Windows.UI.Notifications.ToastNotification $x))`;
 }
+
+/** Fixed, ASCII, one statement per line (see powershell.js). */
+export const TOAST_SCRIPT = [
+  '$ErrorActionPreference = "Stop"',
+  '[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null',
+  '[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null',
+  '$x = New-Object Windows.Data.Xml.Dom.XmlDocument',
+  '$x.LoadXml($env:TOAST_XML)',
+  `[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('${APP_ID}').Show((New-Object Windows.UI.Notifications.ToastNotification $x))`,
+].join('\n');
 
 export class Notifier extends EventEmitter {
   constructor({ config, settings, spawnImpl = spawn, fetchImpl = globalThis.fetch }) {
@@ -49,15 +54,10 @@ export class Notifier extends EventEmitter {
     return out;
   }
 
-  toast({ title, body, url }) {
-    const enc = Buffer.from(toastScript({ title, body, url }), 'utf16le').toString('base64');
-    return new Promise((resolve, reject) => {
-      const p = this.spawnImpl('powershell.exe', ['-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-EncodedCommand', enc], { windowsHide: true });
-      let err = '';
-      p.stderr?.on('data', (d) => { err += d; });
-      p.on('error', reject);
-      p.on('close', (code) => (code === 0 ? resolve() : reject(new Error(err.trim().split('\n')[0] || `powershell exited ${code}`))));
-    });
+  async toast({ title, body, url }) {
+    const r = await runPowerShell(TOAST_SCRIPT, { env: { TOAST_XML: toastXml({ title, body, url }) }, timeoutMs: 30_000, spawnImpl: this.spawnImpl });
+    // with -Command - a failed line doesn't change the exit code, so stderr is the signal
+    if (r.timedOut || r.code !== 0 || r.err.trim()) throw new Error(r.err.trim().split('\n')[0] || `powershell exited ${r.code}`);
   }
 
   async telegram(text) {

@@ -44,20 +44,4 @@ function Get-StudioProcess {
   @(Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -and $_.CommandLine.ToLower().Contains($needle) })
 }
 
-# Starts the server with no window, appending its output to data\server.log (same as Start with Windows).
-function Start-Studio {
-  $node = (Get-Command node -ErrorAction SilentlyContinue).Source
-  if (-not $node) { throw 'Node.js is not installed. Run Install.cmd again.' }
-  New-Item -ItemType Directory -Force (Join-Path $Root 'data') | Out-Null
-  $js = Join-Path $Root 'server\index.js'
-  $log = Join-Path $Root 'data\server.log'
-  # if something still holds server.log open, cmd can't append to it and node never starts: use a fresh log
-  try { [IO.File]::Open($log, 'Append', 'Write', 'ReadWrite').Close() } catch { $log = Join-Path $Root ('data\server-{0:yyyyMMdd-HHmmss}.log' -f (Get-Date)) }
-  Start-Process -FilePath $env:ComSpec -ArgumentList "/c `"`"$node`" `"$js`" >> `"$log`" 2>&1`"" -WorkingDirectory $Root -WindowStyle Hidden
-  return $log
-}
-
-function Wait-StudioUp([int]$Port, [int]$Seconds = 30) {
-  for ($i = 0; $i -lt ($Seconds * 2); $i++) { if (Test-StudioUp $Port) { return $true }; Start-Sleep -Milliseconds 500 }
-  return $false
-}
+# Starting the Studio is scripts\open-studio.mjs (plain Node, no PowerShell): see server\powershell.js for why.
