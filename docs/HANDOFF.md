@@ -116,7 +116,7 @@ The full transcript of the build session (on the old account) is at
 `C:\Users\Waseem\.claude\projects\D--Diwan-Offers-Studio\e5411f66-d707-43cc-9ec3-16e6034292e3.jsonl`.
 It's a raw log; this file is the summary to work from.
 
-## 10. Added on 23 Nov 2026 (not committed yet)
+## 10. Added on 23 Nov 2026 (branch `studio-edit-images`, commits 0bd7ab3 and db4031e)
 
 - **Quick edits** (from the night of 22–23 Nov): price, name, unit and saving changes on the flyer stage
   applied by the Studio itself, $0, no agent (`server/quick.js`).
