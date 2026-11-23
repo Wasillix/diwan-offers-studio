@@ -120,7 +120,15 @@ D:\Diwan\005 - FMCG Items\001 - Isolated Items\   Product photo library (read-on
 
 - Plain ES modules, no build: `app.js` (hash router) → `views/weeks.js`, `views/new-week.js`, `views/week.js`,
   `views/lightbox.js`; helpers in `lib.js`. Served with `Cache-Control: no-cache`, so a refresh picks up edits.
-- Arabic goes through `txt()` (RTL + Madani; English sentences that quote Arabic keep LTR and isolate the Arabic).
+- Arabic goes through `txt()` (RTL; English sentences that quote Arabic keep LTR and isolate the Arabic).
+- Look: Diwan Market brand on the unslop rules (github.com/heydamir/unslop, CC BY 4.0, Damir Sokolovsky).
+  One family for both scripts, **Teshrin** (`web/fonts/teshrin-400|500|600.otf`), weights 400/500 only.
+  Warm neutrals from paper #F5F5F2 / halo #F0ECE5, one accent (Diwan red #A12222) for the primary action,
+  selection, pins and "ready for review". One red primary button per area; other actions use `.btn-mark`
+  (secondary). Status is a dot + text (`chip()`), never a filled pill; no pulse animations; colour-only
+  transitions, 150 ms, `--ease`. The yellow #EDC11C date `.sticker` is the signature: week dates only.
+  Arabic: letter-spacing 0, line-height 1.7, no italics. The flyer itself keeps Madani (toolkit fonts).
+  Tokens live at the top of `web/styles.css`.
 - Pins are stored in 1080-px page coordinates (`kind:'pin', file, page, x, y`); unsent edits are saved
   on the server (`PUT …/pending`) so they survive a refresh.
 - Screenshots: run the mock server with `DATA_DIR=data/demo`, seed weeks, then `node test/screens.mjs` → `docs/screenshots/`.

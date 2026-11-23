@@ -37,7 +37,7 @@ export async function weeksView(root) {
       <div class="page-head">
         <div>
           <h1>Offer weeks</h1>
-          <p class="lede">${waiting ? `${waiting} week${waiting > 1 ? 's' : ''} waiting for you.` : 'Nothing waiting for you right now.'}</p>
+          <p class="lede">${waiting ? `${waiting} waiting for your review` : 'Nothing waiting for review'}</p>
         </div>
       </div>
       <div class="weeks" role="list">
@@ -46,7 +46,7 @@ export async function weeksView(root) {
              href="${w.state === 'draft' ? `#/new/${esc(w.id)}` : `#/week/${esc(w.id)}`}">
             <div>
               <div class="week-name">${esc(w.offer_name)}</div>
-              <div class="week-dates"><span class="num">${esc(w.dates_en || 'No dates yet')}</span>${w.dates_ar ? txt(w.dates_ar) : ''}</div>
+              <div class="week-dates">${w.dates_en ? `<span class="num sticker">${esc(w.dates_en)}</span>` : '<span class="muted">No dates yet</span>'}${w.dates_ar ? txt(w.dates_ar) : ''}</div>
             </div>
             <span class="look-tag"><i class="look-dot ${esc(w.look)}"></i>${esc(lookTitle[w.look] || w.look)}</span>
             <div>

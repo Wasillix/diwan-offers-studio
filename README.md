@@ -112,3 +112,9 @@ D:\Diwan\005 - FMCG Items\...    product photo library (the agent never changes 
 ```
 
 Developer notes are in `CLAUDE.md`; the full spec is in `docs/`.
+
+## Credits
+
+The Studio's look follows the design rules of [unslop](https://github.com/heydamir/unslop) by
+Damir Sokolovsky (@heydamir), licensed CC BY 4.0, adapted to Diwan Market's brand. The UI font is
+Teshrin (Arabic and Latin).

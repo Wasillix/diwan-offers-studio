@@ -6,7 +6,7 @@ export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const HAS_AR = /[؀-ۿ]/;
 const FIRST_STRONG = /[A-Za-z؀-ۿ]/;
 const AR_RUN = /[؀-ۿ][؀-ۿً-ٟ\s\d.,%$\-–()]*[؀-ۿ]|[؀-ۿ]/g;
-/** Arabic text renders right-to-left in Madani. An English sentence that quotes Arabic keeps its
+/** Arabic text renders right-to-left (Teshrin, same family as the UI). An English sentence that quotes Arabic keeps its
  *  direction and only the Arabic runs are isolated, so the words don't get reordered. */
 export function txt(s) {
   s = String(s ?? '');

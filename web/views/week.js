@@ -51,7 +51,7 @@ export async function weekView(root, id, stageParam) {
       <div class="wk-title">
         <h1>${esc(job.offer_name)}</h1>
         ${txt(job.dates_ar)}
-        <div class="wk-meta"><span class="num">${esc(job.dates_en)}</span></div>
+        ${job.dates_en ? `<div class="wk-meta"><span class="num sticker">${esc(job.dates_en)}</span></div>` : ''}
         <div class="wk-meta"><span class="look-tag"><i class="look-dot ${esc(job.look)}"></i>${esc(meta.looks.find((l) => l.key === job.look)?.title || job.look)}</span><span class="num">${esc(job.tag)}</span></div>
       </div>
       <ol class="steps">${stages.map((s, i) => {
@@ -230,7 +230,7 @@ export async function weekView(root, id, stageParam) {
               <label>File name <input class="input" data-lib-name="${i}" value="${esc(l.name)}" aria-label="File name"></label>`}
             </div>
             <div class="lib-act">${sv ? `<button class="btn btn-sm btn-ghost" data-lib-undo="${esc(sv.target)}">Undo</button>`
-              : `<button class="btn btn-sm btn-primary" data-lib-save="${i}">Save to library</button>`}</div></div>`;
+              : `<button class="btn btn-sm btn-mark" data-lib-save="${i}">Save to library</button>`}</div></div>`;
         }).join('')}</div><datalist id="lib-folders"></datalist></div>`;
     }
     el.innerHTML = html;
@@ -323,7 +323,7 @@ export async function weekView(root, id, stageParam) {
     body.innerHTML = `<div class="quick-tools"><input class="input" id="quick-filter" placeholder="Find a card (name, code, section)" value="${esc(S.qfilter)}" aria-label="Find a card">
         <span class="muted" style="font-size:13px">Layout, photos and anything else: pin it on the page and use Send edits (the agent).</span></div>
       <div class="cards-wrap"><table class="cards quick-table"><thead><tr><th>#</th>${QF.map(([, l]) => `<th>${l}</th>`).join('')}</tr></thead><tbody>${out || '<tr><td colspan="7" class="muted">No card matches.</td></tr>'}</tbody></table></div>
-      <div class="quick-bar"><span id="quick-count"></span><button class="btn btn-sm btn-ghost" id="quick-reset">Undo all</button><button class="btn btn-sm btn-primary" id="quick-apply">Apply quick edits</button></div>`;
+      <div class="quick-bar"><span id="quick-count"></span><button class="btn btn-sm btn-ghost" id="quick-reset">Undo all</button><button class="btn btn-sm btn-mark" id="quick-apply">Apply quick edits</button></div>`;
     updateQuickBar();
   }
 
@@ -396,7 +396,7 @@ export async function weekView(root, id, stageParam) {
     for (const pre of $$('[data-text]', el)) {
       const t = await fetch(fileUrl(job.id, pre.dataset.text)).then((r) => r.text()).catch(() => '');
       pre._raw = t;
-      // one block per line, each with its own direction: Arabic lines RTL in Madani, English lines LTR
+      // one block per line, each with its own direction: Arabic lines RTL, English lines LTR
       pre.innerHTML = t.replace(/\n+$/, '').split('\n').map((line) => {
         const ar = /^[^A-Za-z]*[؀-ۿ]/.test(line);
         return `<div dir="${ar ? 'rtl' : 'ltr'}" class="${ar ? 'ar' : 'ltr-line'}">${esc(line) || '&nbsp;'}</div>`;
@@ -511,7 +511,7 @@ export async function weekView(root, id, stageParam) {
         <label>Brand, product and size (English)<input class="input" name="text" value="${esc(pf.text)}" placeholder="Harpic Toilet Cleaner 750 ml" aria-label="Brand, product and size"></label>
         ${pf.images.length ? attDraft(pf.images, 'photo') : '<p class="drop-hint">Drop the photo here, paste it (Ctrl+V), or choose it.</p>'}
         <div class="add-row"><button type="button" class="btn btn-sm btn-ghost" data-attach="photo">${CLIP} Choose photo</button><span class="grow"></span>
-          <button type="button" class="btn btn-sm btn-ghost" data-photo-cancel>Cancel</button><button class="btn btn-sm btn-primary">Add photo</button></div>
+          <button type="button" class="btn btn-sm btn-ghost" data-photo-cancel>Cancel</button><button class="btn btn-sm btn-mark">Add photo</button></div>
         <p class="drop-hint">A clean pack shot on white works best. The agent cuts it out and suggests where it goes in the photo library.</p>
       </form>` : ''}
       <form class="add-note drop-zone" id="add-note"><textarea class="input" placeholder="General note for the agent. Paste or drop images here." aria-label="General note">${esc(S.draftText || '')}</textarea>

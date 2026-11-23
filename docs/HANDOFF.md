@@ -126,5 +126,7 @@ It's a raw log; this file is the summary to work from.
   suggests a library folder and file name (`library`), and **Save to library** files the photo
   (`server/library.js`).
 - **Setup page** on first run with a Windows folder picker (`web/views/setup.js`, `system.js pickFolder`).
-- Next on the list: UI redesign with the unslop skill (github.com/heydamir/unslop, CC BY 4.0) in Diwan
-  Market branding, then installing from GitHub (`Install.cmd`, private repo), then the client-feedback ideas.
+- **UI redesign**: Diwan Market brand on the unslop rules (github.com/heydamir/unslop, CC BY 4.0,
+  credited in README). Teshrin for Arabic and English, the Diwan wordmark in the top bar, one red accent,
+  status as dot + text, a yellow date sticker on week dates. See CLAUDE.md → Studio UI notes.
+- Next on the list: installing from GitHub (`Install.cmd`, private repo), then the client-feedback ideas.
