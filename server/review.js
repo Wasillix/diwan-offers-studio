@@ -36,7 +36,32 @@ export function validateReview(raw, { stage, round, jobDir } = {}) {
     else q.blocking = !!q.blocking;
   });
   if (r.cards_changed !== undefined && typeof r.cards_changed !== 'boolean') errors.push('cards_changed must be true/false');
+
+  // Optional lists: a bad entry is dropped with a warning, never fails the round (that would cost a rerun).
+  const warnings = [];
+  // Items with no usable photo, so Waseem can attach one from the Studio.
+  r.missing = (Array.isArray(r.missing) ? r.missing : []).filter((m, i) => {
+    const ok = m && (typeof m.card === 'string' || typeof m.en === 'string');
+    if (!ok) warnings.push(`missing[${i}] dropped: needs card (Arabic name) or en`);
+    return ok;
+  });
+  // New product photos to file in the photo library (the Studio copies one when Waseem clicks Save).
+  r.library = (Array.isArray(r.library) ? r.library : []).filter((l, i) => {
+    const why = libraryEntryProblem(l, jobDir);
+    if (why) warnings.push(`library[${i}] dropped: ${why}`);
+    return !why;
+  });
+  if (warnings.length) r.warnings = warnings;
   return { ok: errors.length === 0, errors, review: r };
+}
+
+function libraryEntryProblem(l, jobDir) {
+  if (!l || typeof l.source !== 'string' || typeof l.folder !== 'string' || typeof l.name !== 'string') return 'needs source, folder and name';
+  if (path.isAbsolute(l.source) || l.source.split(/[\\/]/).includes('..')) return 'source must be relative to the job folder';
+  if (jobDir && !fs.existsSync(path.join(jobDir, l.source))) return `source not found: ${l.source}`;
+  if (path.isAbsolute(l.folder) || /^[a-z]:/i.test(l.folder) || l.folder.split(/[\\/]/).includes('..')) return 'folder must be relative to the photo library';
+  if (/[\\/]/.test(l.name) || !/\.(png|jpe?g|webp)$/i.test(l.name)) return 'name must be a file name ending in .png, .jpg or .webp';
+  return null;
 }
 
 export function readAndValidate(jobDir, stage, round) {

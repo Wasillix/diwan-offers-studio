@@ -50,8 +50,10 @@ When the client changes a rule, update the skill.
   photo library and logos come in through `additionalDirectories`. A `canUseTool` guard allows writes only
   in the job folder and `diwan-brand-rules` (delivery also gets `Claude outputs\<TAG>` and `toolkit/img`).
   Bash may not change the photo library or git. Web tools, PowerShell and subagents are removed.
-- **Never** edit the original toolkit in `D:\Diwan\Claude outputs\Pipeline\`. **Never** write to
-  `D:\Diwan\005 - FMCG Items\` (read-only photo library).
+- **Never** edit the original toolkit in `D:\Diwan\Claude outputs\Pipeline\`. The agent and scripts **never**
+  write to `D:\Diwan\005 - FMCG Items\`. Since 23 Nov 2026 (Waseem's call) the one exception is the Studio's
+  **Save to library** button: it copies a new product photo in after Waseem checks the folder and name, never
+  overwrites, logs to `data/library-log.jsonl`, and Undo moves it to `data/trash/library/`.
 - `nextStage` holds while *any* stage is running, awaiting review, editing or failed. This fixes a bug where
   a rerun started while a later stage was still awaiting review.
 
@@ -113,3 +115,16 @@ These are the client's rules now. The playbook's currency lines were aligned wit
 The full transcript of the build session (on the old account) is at
 `C:\Users\Waseem\.claude\projects\D--Diwan-Offers-Studio\e5411f66-d707-43cc-9ec3-16e6034292e3.jsonl`.
 It's a raw log; this file is the summary to work from.
+
+## 10. Added on 23 Nov 2026 (not committed yet)
+
+- **Quick edits** (from the night of 22–23 Nov): price, name, unit and saving changes on the flyer stage
+  applied by the Studio itself, $0, no agent (`server/quick.js`).
+- **Images on edits**: paste, drop or attach images on any comment, each marked as client markup, a new
+  product photo, or a reference. The agent opens them with Read (`server/attachments.js`).
+- **Missing item photos**: review.json `missing` gives each item an **Attach photo** button. The agent
+  suggests a library folder and file name (`library`), and **Save to library** files the photo
+  (`server/library.js`).
+- **Setup page** on first run with a Windows folder picker (`web/views/setup.js`, `system.js pickFolder`).
+- Next on the list: UI redesign with the unslop skill (github.com/heydamir/unslop, CC BY 4.0) in Diwan
+  Market branding, then installing from GitHub (`Install.cmd`, private repo), then the client-feedback ideas.

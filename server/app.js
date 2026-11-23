@@ -7,9 +7,11 @@ import * as M from './machine.js';
 import { STAGES, DELIVERABLES, STAGE_KEYS } from './stages.js';
 import { makeTag } from './store.js';
 import { QUICK_STAGES, readCards, planChanges } from './quick.js';
+import { saveAttachment, MAX_BYTES } from './attachments.js';
+import { libraryFolders, libraryStats, saveToLibrary, undoSave, logLibrary } from './library.js';
 
 import { DEFAULT_TASKS } from './settings.js';
-import { toolChecks, folderChecks, authStatus } from './system.js';
+import { toolChecks, folderChecks, authStatus, pickFolder } from './system.js';
 
 export { DEFAULT_TASKS };
 
@@ -27,11 +29,20 @@ export function listLooks(root) {
   });
 }
 
-/** settings, notifier, scheduler, inbox, startup and onAgentMode are optional (tests run without them). */
-export function createApp({ config, store, runner, settings, notifier, scheduler, inbox, startup, onAgentMode }) {
+/**
+ * settings, notifier, scheduler, inbox, startup and onAgentMode are optional (tests run without them).
+ * pickFolderImpl replaces the Windows folder picker in tests.
+ */
+export function createApp({ config, store, runner, settings, notifier, scheduler, inbox, startup, onAgentMode, pickFolderImpl = pickFolder }) {
   const app = express();
   app.use(express.json({ limit: '2mb' }));
   const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 200 * 1024 * 1024 } });
+  const imageUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_BYTES, files: 1 } });
+  const oneImage = (req, res, next) => imageUpload.single('file')(req, res, (e) => {
+    if (!e) return next();
+    res.status(e.code === 'LIMIT_FILE_SIZE' ? 413 : 400).json({ error: e.code === 'LIMIT_FILE_SIZE' ? 'The image is over 25 MB.' : e.message });
+  });
+  const nowIso = () => new Date().toISOString();
 
   const view = (job) => job && ({
     ...job,
@@ -49,7 +60,7 @@ export function createApp({ config, store, runner, settings, notifier, scheduler
     try { res.json(await fn(req, res)); } catch (e) {
       const code = e instanceof M.MachineError ? e.code : e.code && Number.isInteger(e.code) ? e.code : 500;
       if (code === 500) console.error(e);
-      res.status(code).json({ error: e.message });
+      res.status(code).json({ error: e.message, ...(e.exists ? { exists: true, rel: e.rel } : {}) });
     }
   };
 
@@ -242,6 +253,69 @@ export function createApp({ config, store, runner, settings, notifier, scheduler
     runner.kick(job.id);
     return { ...v, quickRound: round.n };
   }));
+
+  // ---- images attached to edits (server/attachments.js): saved in the week's attachments/<stage>/
+  app.post('/api/jobs/:id/attachments', oneImage, route((req) => {
+    const job = load(req);
+    const stage = req.body?.stage;
+    if (!job.stages[stage]) throw Object.assign(new Error('unknown stage'), { code: 400 });
+    if (!req.file) throw Object.assign(new Error('no image in the upload'), { code: 400 });
+    // multer reads non-ASCII file names as latin1
+    const originalname = Buffer.from(req.file.originalname || 'image', 'latin1').toString('utf8');
+    const a = saveAttachment(store.dir(job.id), stage, { ...req.file, originalname });
+    store.log(job.id, { type: 'app', stage, text: `Image attached: ${originalname}` });
+    return a;
+  }));
+
+  // ---- photo library (server/library.js): the Studio files new product photos only when Waseem clicks Save
+  app.get('/api/library/folders', route(() => ({ root: config.imageLibrary, folders: libraryFolders(config.imageLibrary) })));
+  app.post('/api/jobs/:id/library', route((req) => {
+    const job = load(req);
+    const { source, folder, name, stage = null, round = null } = req.body || {};
+    const saved = saveToLibrary({ lib: config.imageLibrary, jobDir: store.dir(job.id), source, folder, name });
+    const entry = { source, target: saved.rel, size: saved.size, stage, round, at: nowIso() };
+    job.library = [...(job.library || []), entry];
+    logLibrary(config.dataDir, { action: 'add', jobId: job.id, library: config.imageLibrary, ...entry });
+    store.log(job.id, { type: 'app', stage, text: `Saved to the photo library: ${saved.rel}${saved.newFolder ? ' (new folder)' : ''}` });
+    return { ...save(job), saved: { ...entry, newFolder: saved.newFolder } };
+  }));
+  app.post('/api/jobs/:id/library/undo', route((req) => {
+    const job = load(req);
+    const e = (job.library || []).find((x) => x.target === req.body?.target && !x.undoneAt);
+    if (!e) throw Object.assign(new Error('The Studio didn\'t add that file for this week.'), { code: 404 });
+    const r = undoSave({ lib: config.imageLibrary, rel: e.target, size: e.size, trashDir: path.join(config.dataDir, 'trash', 'library') });
+    e.undoneAt = nowIso();
+    logLibrary(config.dataDir, { action: 'undo', jobId: job.id, library: config.imageLibrary, target: e.target, movedTo: r.movedTo || null });
+    store.log(job.id, { type: 'app', stage: e.stage, text: `Removed from the photo library: ${e.target}${r.movedTo ? ' (kept in data/trash/library)' : ''}` });
+    return save(job);
+  }));
+
+  // ---- first-run Setup (#/setup) and the Windows folder picker
+  const SETUP_PATHS = ['imageLibrary', 'logos', 'inbox', 'outputs'];
+  const setupView = () => {
+    const s = need(settings, 'Settings').get();
+    return { done: !!s.setup?.done, paths: s.paths, folders: folderChecks(s.paths), library: libraryStats(s.paths.imageLibrary), auth: authStatus(store), windows: process.platform === 'win32' };
+  };
+  app.get('/api/setup', route(() => setupView()));
+  app.post('/api/setup', route((req) => {
+    const s = need(settings, 'Settings');
+    const paths = {};
+    for (const k of SETUP_PATHS) {
+      const v = String(req.body?.paths?.[k] ?? s.get().paths[k] ?? '').trim().replace(/^"|"$/g, '');
+      if (!v || !path.isAbsolute(v)) throw Object.assign(new Error(`Pick a full folder path for ${k === 'imageLibrary' ? 'the photo library' : k}.`), { code: 400 });
+      paths[k] = v;
+    }
+    if (!fs.existsSync(paths.imageLibrary)) throw Object.assign(new Error(`The photo library folder isn't there: ${paths.imageLibrary}`), { code: 400 });
+    for (const k of ['inbox', 'outputs']) fs.mkdirSync(paths[k], { recursive: true }); // made for you if new
+    s.update({ paths, setup: { done: true, at: nowIso() } });
+    inbox?.start();
+    return setupView();
+  }));
+  app.post('/api/system/folder-check', route((req) => {
+    const p = String(req.body?.path || '').trim().replace(/^"|"$/g, '');
+    return { path: p, ...(p && path.isAbsolute(p) ? libraryStats(p) : { exists: false, images: 0, folders: 0 }) };
+  }));
+  app.post('/api/system/pick-folder', route(async (req) => ({ path: await pickFolderImpl({ initial: req.body?.initial, title: req.body?.title || 'Choose a folder' }) })));
 
   // ---- live updates (SSE): /api/events (all weeks) and /api/jobs/:id/events (one week + its log)
   const sse = (req, res, filter, global = false) => {

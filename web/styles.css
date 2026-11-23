@@ -371,3 +371,55 @@ table.quick-table td.q-u_ar,table.quick-table td.q-u_en{width:100px}
 table.quick-table td.q-price{width:120px} table.quick-table td.q-saving{width:90px}
 .quick-bar{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:10px;font-size:14px}
 .quick-bar #quick-count{margin-right:auto;color:var(--ink-2)}
+
+/* ---------- images on edits (attachments), missing-item photos, filing photos in the library */
+.ico{flex:none;vertical-align:-2px}
+.edit-tag.k-photo{background:var(--ok)}
+.edit-foot{grid-column:2/4;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.edit-foot .edit-std{grid-column:auto}
+.att-add{border:0;background:none;color:var(--ink-2);font-size:12.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:2px 4px;border-radius:4px;margin-left:auto}
+.att-add:hover{color:var(--ink);background:var(--panel-2)}
+.att-thumbs{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.att{display:flex;flex-direction:column;align-items:center;gap:4px;position:relative}
+.att-img{display:block;width:64px;height:64px;padding:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel-2) repeating-conic-gradient(#eef0f3 0 25%,#fff 0 50%) 0 0/12px 12px;cursor:zoom-in}
+.att-img img{width:100%;height:100%;object-fit:contain;display:block}
+.note .att-img,.state-box .att-img{width:44px;height:44px}
+.att-role{font-style:normal;font-size:11px;font-weight:600;color:var(--mute)}
+.att-role-pick{font-size:11px;border:1px solid var(--line-2);border-radius:4px;padding:1px 2px;background:#fff;color:var(--ink-2);width:80px}
+.att-x{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;border:1px solid var(--line);background:#fff;color:var(--mute);font-size:13px;line-height:15px;padding:0;cursor:pointer}
+.att-x:hover{color:var(--mark);border-color:var(--mark)}
+.add-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.add-row .grow{flex:1}
+.photo-form{border:1px solid var(--line);border-radius:var(--r);padding:12px;background:var(--panel-2)}
+.photo-form h3{margin:0;font-size:14px}
+.photo-form label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;font-weight:600;color:var(--ink-2)}
+.photo-form .input{padding:7px 9px;font-weight:400}
+.drop-hint{margin:0;font-size:12.5px;color:var(--mute)}
+.drop-zone{transition:background-color .15s,border-color .15s}
+.rail.dropping .drop-zone,.rail.dropping #add-note textarea{border-color:var(--run)}
+.drop-over,.drop-over textarea{background:var(--run-soft)!important;border-color:var(--run)!important}
+.note.sent{border-left:3px solid var(--run)}
+.note.sent .edit-tag{display:inline-block;margin-right:4px}
+.cards.miss td{vertical-align:middle}
+.ok-txt{color:var(--ok);font-size:13px;font-weight:600;white-space:nowrap}
+.lib-list{display:flex;flex-direction:column;gap:10px}
+.lib-row{display:grid;grid-template-columns:96px 1fr auto;gap:14px;align-items:start;background:var(--panel);border:1px solid var(--line-2);border-radius:var(--r);padding:12px}
+.lib-row.saved{background:var(--ok-soft);border-color:transparent}
+.lib-img{width:96px;height:96px}
+.lib-fields{display:flex;flex-direction:column;gap:8px;min-width:0}
+.lib-fields label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;font-weight:600;color:var(--ink-2)}
+.lib-fields .input{padding:7px 9px;font-weight:400}
+.lib-hint{color:var(--note-ink);font-size:12px;margin-top:-4px}
+.lib-hint:empty{display:none}
+.lib-done{font-size:14px}
+.input.bad{border-color:var(--mark);box-shadow:0 0 0 3px var(--mark-soft)}
+
+/* ---------- Setup (#/setup) and folder pickers */
+.pick-row{display:flex;gap:8px;align-items:center}
+.pick-row .input{flex:1;min-width:0}
+.pick-stat{min-height:18px}
+.setup-field{padding:6px 0 10px;border-bottom:1px solid var(--line-2)}
+.setup-field:last-child{border-bottom:0}
+.setup-field small{display:block;font-size:12.5px;margin-top:2px}
+.warn-txt{color:var(--mark);font-size:13px;font-weight:600}
+.setup-foot{display:flex;justify-content:flex-end;gap:10px;margin:8px 0 40px}

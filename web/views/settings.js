@@ -88,8 +88,11 @@ export async function settingsView(root) {
       <div class="panel">
         <h2>Folders</h2>
         ${v.folders.map((f) => `<div class="field"><label for="s-p-${f.key}">${ok(f.ok)} ${esc(f.label)}</label>
-          <input class="input" id="s-p-${f.key}" data-k="paths.${f.key}" value="${esc(f.path)}" ${f.key === 'toolkit' ? 'readonly' : ''}>
+          <div class="pick-row"><input class="input" id="s-p-${f.key}" data-k="paths.${f.key}" value="${esc(f.path)}" ${f.key === 'toolkit' ? 'readonly' : ''}>
+            ${f.key === 'toolkit' ? '' : `<button class="btn" data-act="browse:${f.key}">Browse…</button>`}</div>
           ${f.ok ? '' : `<small style="color:var(--mark)">Not found.${f.key === 'inbox' ? ' It\'s created when the inbox watcher starts.' : ''}</small>`}</div>`).join('')}
+        <div class="set-foot"><span class="muted">New photos you file from a week are logged in <span class="num">data/library-log.jsonl</span>.</span>
+          <a class="btn btn-sm" href="#/setup">Run setup again</a></div>
       </div>
 
       <div class="panel">
@@ -132,6 +135,14 @@ export async function settingsView(root) {
   root.addEventListener('click', async (e) => {
     const a = e.target.closest('[data-act]')?.dataset.act;
     if (!a) return;
+    if (a.startsWith('browse:')) {
+      const k = a.slice(7);
+      try {
+        const r = await post('/api/system/pick-folder', { initial: v.settings.paths[k], title: `Choose the ${v.folders.find((f) => f.key === k)?.label || ''} folder` });
+        if (r.path) await save({ paths: { [k]: r.path } }, 'Folder saved');
+      } catch (err) { toast(err.message, { error: true }); }
+      return;
+    }
     try {
       if (a === 'test-notification') { const r = await post('/api/settings/test-notification'); toast(r.channels?.length ? `Sent: ${r.channels.join(', ')}` : 'No channel is on'); }
       if (a === 'scan-inbox') { const r = await post('/api/settings/scan-inbox'); toast(r.created.length ? `${r.created.length} new draft week${r.created.length > 1 ? 's' : ''}` : 'No new sheets in the inbox'); }

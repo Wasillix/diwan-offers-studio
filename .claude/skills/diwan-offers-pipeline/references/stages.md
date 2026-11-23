@@ -27,7 +27,8 @@ absolute build path as the first argument.
   can be swapped.
 - Multi-flavour items need one photo per flavour. Multipacks reuse the pack photo (dup).
 - Review: contact sheet (`review/images/r1/contact.png`, every card's photos labelled with code + Arabic
-  name) and a list of missing / low-res / wrong-size photos for the client.
+  name) and a list of missing / low-res / wrong-size photos for the client. Put the items with no usable
+  photo in review.json `missing` too (review contract), so Waseem can attach their photos in the Studio.
 
 ## 3. cards
 

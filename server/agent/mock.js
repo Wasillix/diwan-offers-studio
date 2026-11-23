@@ -93,6 +93,28 @@ function smokeDir() {
 
 const CARD_EDIT = /price|سعر|\$|merge|split|دمج|card|name|اسم|remove|add/i;
 
+const MOCK_MISSING = [
+  { card: 'كيري ٢٤ قطعة', en: 'Kiri Cheese 24 Portions', codes: ['DAIRYSRV-031'], why: 'no photo in the library' },
+  { card: 'هاربيك', en: 'Harpic Toilet Cleaner 750 ml', codes: ['HHLDS-0412'], why: 'no photo in the library' },
+];
+const MOCK_FOLDER = { 'كيري ٢٤ قطعة': 'Dairy & Eggs/Cheese Slices', 'هاربيك': 'Hygiene & Self Care' };
+
+/**
+ * Attached product photos (a real agent cuts them out and suggests where they go in the library): the mock
+ * uses the attachment itself as the source, suggests a folder and a name, and drops those items from `missing`.
+ */
+function mockPhotos(edits, stage, round, out) {
+  const photos = edits.flatMap((e) => (e.images || []).filter((i) => i.role === 'photo').map((i) => ({ e, i })));
+  const done = new Set(photos.map(({ e }) => e.card).filter(Boolean));
+  const missing = (out.missing || (stage === 'images' && round.n > 1 ? MOCK_MISSING : [])).filter((m) => !done.has(m.card));
+  const library = photos.map(({ e, i }) => {
+    const known = MOCK_MISSING.find((m) => m.card === e.card);
+    const en = known?.en || (/^[\x20-\x7e]+$/.test(e.text) && e.kind === 'photo' && !/^Use this photo/.test(e.text) ? e.text : 'New Item');
+    return { source: i.path, folder: MOCK_FOLDER[e.card] || 'House Hold', name: `${en.replace(/[^\w &.-]+/g, ' ').trim()}.png`.replace(/\.png\.png$/, '.png'), card: e.card || null };
+  });
+  return { ...(missing.length ? { missing } : {}), ...(library.length ? { library } : {}) };
+}
+
 /**
  * createMockAgent(options)
  *   delayMs     ms between fake steps (default 120; tests use 0)
@@ -133,6 +155,7 @@ export function createMockAgent(options = {}) {
         files: out.files, checks: out.checks || {}, questions: out.questions || [], assumptions: out.assumptions || [],
         rules_added: edits.filter((e) => e.standing).map((e) => `Added to diwan-brand-rules: ${e.text}`),
         ...(cardsChanged ? { cards_changed: true } : {}),
+        ...mockPhotos(edits, stage, round, out),
       };
       if (round.kind === 'rerun') review.changes.unshift(`Rebuilt: ${round.reason || 'cards changed upstream'}`);
       await sleep(delay, signal);
@@ -183,6 +206,7 @@ const BUILDERS = {
       files: [{ path: rel(f), kind: 'image', label: 'Contact sheet' }, { path: rel('missing.txt'), kind: 'text', label: 'Missing / low-res photos' }],
       checks: { matched: 112, missing: 23, low_res: 4 },
       assumptions: ['Used the 400 g bag photo for Chtoura peas 800 g'],
+      missing: MOCK_MISSING,
     };
   },
   cards({ rdir, rel, jobDir }) {

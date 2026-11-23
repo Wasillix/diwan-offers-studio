@@ -145,6 +145,7 @@ export class Runner extends EventEmitter {
         if (result?.init) fresh.stages[stage].rounds.at(-1).agent = agentInfo(result.init);
         this._log(jobId, { type: 'app', stage, round: round.n, text: `■ ${stage} round ${round.n} ready for review` });
         if (reruns.length) this._log(jobId, { type: 'app', stage, text: `Cards changed: ${reruns.join(', ')} will rebuild` });
+        for (const w of v.review.warnings || []) this._log(jobId, { type: 'app', stage, round: round.n, text: `review.json: ${w}` });
       }
     }
     if (error) {

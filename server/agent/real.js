@@ -65,7 +65,8 @@ function environmentNotes({ jobDir, root, config }) {
 - Job folder (absolute): ${jobDir}. Work in its build/ folder; put review files in review/<stage>/r<round>/; write review/<stage>/review.json last.
 - Python: \`${pyCmd}\` (PYTHONUTF8=1 is already set). Node scripts: \`node "${path.join(jobDir, 'build')}\\<script>.js" "${path.join(jobDir, 'build')}"\`.
 - Paths contain spaces: always quote them.
-- Product photo library (read-only): ${config.imageLibrary}. Diwan logos: ${config.logosDir}.
+- Product photo library (read-only for you): ${config.imageLibrary}. Diwan logos: ${config.logosDir}. To add a new product photo to it, suggest it in review.json "library" (folder + file name in the library's own style); Waseem saves it from the Studio.
+- Images Waseem attaches to edits are in the job's attachments/ folder; their absolute paths are in the edit lines. Open them with Read.
 - You may only write inside the job folder, and to ${path.join(root, '.claude', 'skills', 'diwan-brand-rules', 'SKILL.md')} for standing rules. In the delivery stage also ${path.join(config.outputsDir, '<TAG>')} and the app's toolkit/img, img_pdf, canvas_assets (to promote new cut-outs).
 - No web access. If something is missing, ask in review.json questions instead of guessing.`;
 }

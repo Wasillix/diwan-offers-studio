@@ -5,6 +5,9 @@
 //   running → failed → (retry) running          any → skipped (deliverable not ticked)
 //   approved → (reopen with edits) editing      approved → pending (rerun: cards changed upstream)
 import { STAGES, STAGE_KEYS, CARD_DEPENDENT, isNeeded, stageIndex } from './stages.js';
+import { cleanImages } from './attachments.js';
+
+const KINDS = ['general', 'pin', 'card', 'answer', 'photo'];
 
 export class MachineError extends Error {
   constructor(msg, code = 409) { super(msg); this.code = code; }
@@ -165,13 +168,22 @@ export function recoverInterrupted(job) {
   return changed;
 }
 
-/** Edits from the UI → stored edit lines. kinds: general | pin | card | answer. */
+/**
+ * Edits from the UI → stored edit lines. kinds: general | pin | card | answer | photo (a missing item's photo).
+ * Any edit can carry `images` ([{ path: 'attachments/<stage>/…', role: markup|photo|reference }]); an edit
+ * with images may have no text. A photo edit needs at least one image.
+ */
 export function normaliseEdits(edits) {
+  const EMPTY = { photo: 'Use this photo for the item.', general: 'See the attached image.' };
   return (Array.isArray(edits) ? edits : [edits])
     .map((e) => (typeof e === 'string' ? { kind: 'general', text: e } : e))
-    .filter((e) => e && typeof e.text === 'string' && e.text.trim())
-    .map((e) => {
-      const out = { kind: ['general', 'pin', 'card', 'answer'].includes(e.kind) ? e.kind : 'general', text: e.text.trim() };
+    .filter((e) => e && typeof e === 'object')
+    .map((e) => ({ e, kind: KINDS.includes(e.kind) ? e.kind : 'general', text: typeof e.text === 'string' ? e.text.trim() : '' }))
+    .map((x) => ({ ...x, images: cleanImages(x.e.images, x.kind === 'photo' ? 'photo' : 'markup') }))
+    .filter(({ kind, text, images }) => (kind === 'photo' ? images.length > 0 : text || images.length > 0))
+    .map(({ e, kind, text, images }) => {
+      const out = { kind, text: text || EMPTY[kind] || EMPTY.general };
+      if (images.length) out.images = images;
       if (e.page != null) out.page = +e.page;
       if (e.x != null) out.x = Math.round(+e.x);
       if (e.y != null) out.y = Math.round(+e.y);

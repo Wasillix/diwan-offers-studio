@@ -32,6 +32,11 @@ Stage details and commands: `references/stages.md`. What to write at the end: `r
 - If Waseem says an edit is a standing rule (or it's clearly a client preference that will repeat:
   wording, a name correction, a layout rule), add it to `diwan-brand-rules` (rules or glossary) and
   mention it in `changes`.
+- Edits can carry images (absolute paths after `Images:`). Open each with Read before applying the edit.
+  `client markup` = a client screenshot showing what to change; `reference` = something to match, never
+  placed on the flyer; `new product photo` = use it for that item (`[missing photo for "…"]` lines are always
+  this): map it in `build/image_map.json` by its absolute path, run `prep_new.py`, put it on its card, and add
+  a `library` entry to review.json (see the review contract) so Waseem can file it in the photo library.
 - Re-render, re-check and re-submit with `round` + 1. Show only what changed in `changes`.
 
 ## Questions

@@ -3,6 +3,7 @@ import { $, $$, esc, txt, api, get, post, getMeta, listen, chip, money, toast, d
 import { openLightbox } from './lightbox.js';
 
 const ICON = { approved: '✓', failed: '!', skipped: '–', awaiting_review: '•' };
+const CLIP = '<svg class="ico" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M21 11.5 12.6 20a5.5 5.5 0 0 1-7.8-7.8l8.5-8.5a3.7 3.7 0 0 1 5.2 5.2l-8.5 8.5a1.8 1.8 0 0 1-2.6-2.6l7.8-7.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
 const KIND_ORDER = ['image', 'table', 'html', 'pdf', 'video', 'text', 'zip'];
 
 export async function weekView(root, id, stageParam) {
@@ -22,6 +23,10 @@ export async function weekView(root, id, stageParam) {
     quickOpen: false,
     qcards: null,          // the week's cards for the quick-edit table
     qfilter: '',
+    draftImages: [],       // images on the note being written: [{ path, role, name }]
+    photoForm: null,       // missing-item photo form: { card, text, images }
+    attachTo: null,        // where the file picker's images go: 'draft' | 'photo' | edit index
+    libFolders: null,      // photo library folders for the Save-to-library suggestions
   };
   const stages = meta.stages;
   const sdef = (k) => stages.find((s) => s.key === k);
@@ -36,6 +41,7 @@ export async function weekView(root, id, stageParam) {
     <section class="proof" id="proof" aria-live="polite"></section>
     <aside class="rail"><div class="rail-body" id="rail"></div><div class="decide" id="decide"></div>
       <details class="log" id="log"><summary>Agent log</summary><div class="log-body" id="log-body"></div></details></aside>
+    <input type="file" id="att-file" accept="image/png,image/jpeg,image/webp" multiple hidden>
   </div>`;
 
   // ---------- run sheet
@@ -102,18 +108,168 @@ export async function weekView(root, id, stageParam) {
     const cmp = S.compare ? await review(S.stage, S.compare) : null;
     const checks = Object.entries(rv.checks || {});
     const warnKey = /missing|overflow|duplicate|low_res|no_photo/;
+    const sent = s.rounds.find((r) => r.n === n)?.edits || [];
     el.innerHTML = `${head}
       <p class="summary">${txt(rv.summary)}</p>
       ${checks.length ? `<div class="stat-row">${checks.map(([k, v]) => `<span class="stat ${warnKey.test(k) && +v > 0 ? 'warn' : ''}"><b class="num">${esc(v)}</b>${esc(k.replace(/_/g, ' '))}</span>`).join('')}</div>` : ''}
       <div class="notes">
+        ${sent.length ? `<div class="note sent"><h3>Your edits for round ${n}</h3><ul>${sent.map((e) => `<li><span class="edit-tag k-${e.kind}">${esc(tagText(e))}</span> ${e.card && e.kind !== 'card' ? `${txt(e.card)}: ` : ''}${txt(e.text)}${attThumbs(e.images)}</li>`).join('')}</ul></div>` : ''}
         ${rv.changes?.length ? `<div class="note changes"><h3>Changed in round ${rv.round}</h3><ul>${rv.changes.map((c) => `<li>${txt(c)}</li>`).join('')}</ul></div>` : ''}
         ${rv.assumptions?.length ? `<div class="note assume"><h3>Assumptions</h3><ul>${rv.assumptions.map((c) => `<li>${txt(c)}</li>`).join('')}</ul></div>` : ''}
         ${rv.rules_added?.length ? `<div class="note rules"><h3>Brand rules added</h3><ul>${rv.rules_added.map((c) => `<li>${txt(c)}</li>`).join('')}</ul></div>` : ''}
       </div>
+      <div id="photos"></div>
       ${quickOn() ? '<div id="quick"></div>' : ''}
       <div id="files"></div>`;
+    drawPhotos();
     if (quickOn()) drawQuick();
     await drawFiles($('#files', el), rv, cmp);
+  }
+
+  // ---------- images on edits: thumbnails, upload, missing-item photos, filing photos in the library
+  const ROLE = { markup: ['Client markup', 'Markup'], photo: ['New product photo', 'Photo'], reference: ['Reference', 'Reference'] };
+  const roleOptions = (cur) => Object.entries(ROLE).map(([k, [long, short]]) => `<option value="${k}" title="${long}" ${k === cur ? 'selected' : ''}>${short}</option>`).join('');
+  function tagText(e) {
+    return e.kind === 'pin' ? `p${e.page}` : e.kind === 'card' ? 'Card' : e.kind === 'answer' ? 'Answer' : e.kind === 'photo' ? 'Photo' : 'Note';
+  }
+  /** Image thumbnails; `edit` = index in the pending list (adds role pickers and remove buttons). */
+  function attThumbs(images, edit = null) {
+    if (!images?.length) return '';
+    return `<span class="att-thumbs">${images.map((im, j) => `<span class="att">
+      <button type="button" class="att-img" data-view-img="${esc(im.path)}" title="${esc(ROLE[im.role]?.[0] || im.role)}${im.name ? ` · ${esc(im.name)}` : ''}"><img src="${fileUrl(job.id, im.path)}" alt="${esc(ROLE[im.role]?.[0] || '')}" loading="lazy"></button>
+      ${edit == null ? `<i class="att-role">${esc(ROLE[im.role]?.[1] || im.role)}</i>`
+        : `<select class="att-role-pick" data-img-role="${edit}:${j}" aria-label="What this image is">${roleOptions(im.role)}</select>
+           <button type="button" class="att-x" data-rm-img="${edit}:${j}" aria-label="Remove image">×</button>`}
+    </span>`).join('')}</span>`;
+  }
+
+  /** Images on a form that isn't an edit yet (the note draft or the photo form): role pickers + remove. */
+  function attDraft(images, where) {
+    return `<span class="att-thumbs">${images.map((im, j) => `<span class="att">
+      <button type="button" class="att-img" data-view-img="${esc(im.path)}"><img src="${fileUrl(job.id, im.path)}" alt="" loading="lazy"></button>
+      ${where === 'photo' ? '<i class="att-role">Photo</i>' : `<select class="att-role-pick" data-draft-role="${j}" aria-label="What this image is">${roleOptions(im.role)}</select>`}
+      <button type="button" class="att-x" data-rm-draft="${where}:${j}" aria-label="Remove image">×</button></span>`).join('')}</span>`;
+  }
+
+  async function uploadImages(files, role) {
+    const list = [...files].filter((f) => /^image\//.test(f.type) || /\.(png|jpe?g|webp|heic)$/i.test(f.name));
+    if (!list.length) { toast('Only images can be attached (JPG, PNG or WebP).', { error: true }); return []; }
+    const out = [];
+    for (const f of list) {
+      const fd = new FormData();
+      fd.append('stage', S.stage);
+      fd.append('file', f, f.name || 'pasted-image.png');
+      try { const a = await api('POST', `/api/jobs/${job.id}/attachments`, fd); out.push({ path: a.path, role, name: a.name }); }
+      catch (e) { toast(e.message, { error: true }); }
+    }
+    return out;
+  }
+
+  /** Route new images to the open photo form, an edit, or the note being written. */
+  async function addImages(files, target = S.attachTo) {
+    if (!canEdit()) return;
+    if (target == null) target = S.photoForm ? 'photo' : 'draft';
+    const role = target === 'photo' || (typeof target === 'number' && pending()[target]?.kind === 'photo') ? 'photo' : 'markup';
+    toast(`Uploading ${files.length > 1 ? `${files.length} images` : 'the image'}…`);
+    const imgs = await uploadImages(files, role);
+    if (!imgs.length) return;
+    if (target === 'photo' && S.photoForm) { readPhotoForm(); S.photoForm.images.push(...imgs); }
+    else if (typeof target === 'number' && pending()[target]) {
+      const l = pending().slice();
+      l[target] = { ...l[target], images: [...(l[target].images || []), ...imgs].slice(0, 8) };
+      return setPending(l);
+    } else { readDraft(); S.draftImages.push(...imgs); }
+    drawRail();
+  }
+  // keep what was typed when the rail redraws
+  function readDraft() { const t = $('#add-note textarea', root); if (t) S.draftText = t.value; }
+  function readPhotoForm() {
+    const f = $('#photo-form', root);
+    if (f && S.photoForm) { S.photoForm.card = f.elements.card.value; S.photoForm.text = f.elements.text.value; }
+  }
+  function pickFiles(target) { S.attachTo = target; const inp = $('#att-file', root); inp.value = ''; inp.click(); }
+
+  function openPhotoForm(prefill = {}) {
+    readDraft();
+    $('#photo-form', root)?.remove(); // a fresh form: don't read the old one's fields back
+    S.photoForm = { card: prefill.card || '', text: prefill.text || '', images: [] };
+    drawRail();
+    $('#photo-form [name="card"]', root)?.focus();
+  }
+
+  async function drawPhotos() {
+    const el = $('#photos', root);
+    if (!el) return;
+    const rv = S.reviews[`${S.stage}:${viewedRound()}`];
+    const missing = rv?.missing || [];
+    const lib = rv?.library || [];
+    const added = new Set(pending().filter((e) => e.kind === 'photo').map((e) => e.card));
+    let html = '';
+    if (missing.length && !S.compare) {
+      html += `<div class="fileblock"><div class="fileblock-head"><h3>Missing photos <span class="muted">${missing.length}</span></h3>
+        <span class="muted" style="font-size:13px">Attach the client's photo and the agent puts it on the card in the next round.</span></div>
+        <div class="cards-wrap"><table class="cards miss"><tbody>${missing.map((m, i) => `<tr>
+          <td class="ar" dir="rtl">${esc(m.card || '')}</td>
+          <td>${esc(m.en || '')}<div class="codes num">${esc((m.codes || []).join(' '))}</div></td>
+          <td class="muted">${esc(m.why || '')}</td>
+          <td style="text-align:right">${added.has(m.card || m.en) ? '<span class="ok-txt">✓ Photo in your edits</span>'
+            : canEdit() ? `<button class="btn btn-sm" data-missing="${i}">Attach photo</button>` : ''}</td></tr>`).join('')}</tbody></table></div></div>`;
+    }
+    if (lib.length && !S.compare) {
+      const savedOf = (src) => (job.library || []).find((x) => x.source === src && !x.undoneAt);
+      html += `<div class="fileblock lib"><div class="fileblock-head"><h3>New photos for the photo library</h3>
+        <span class="muted" style="font-size:13px">Check the folder and name, then Save. The Studio copies the photo; nothing in the library is ever overwritten.</span></div>
+        <div class="lib-list">${lib.map((l, i) => {
+          const sv = savedOf(l.source);
+          return `<div class="lib-row ${sv ? 'saved' : ''}">
+            <button type="button" class="att-img lib-img" data-view-img="${esc(l.source)}"><img src="${fileUrl(job.id, l.source)}" alt="New photo${l.card ? ` for ${esc(l.card)}` : ''}" loading="lazy"></button>
+            <div class="lib-fields">${l.card ? `<div class="ar" dir="rtl">${esc(l.card)}</div>` : ''}
+              ${sv ? `<div class="lib-done">Saved to <span class="path">${esc(sv.target)}</span></div>` : `
+              <label>Folder <input class="input" list="lib-folders" data-lib-folder="${i}" value="${esc(l.folder)}" aria-label="Folder in the photo library"></label>
+              <small class="lib-hint" data-lib-hint="${i}"></small>
+              <label>File name <input class="input" data-lib-name="${i}" value="${esc(l.name)}" aria-label="File name"></label>`}
+            </div>
+            <div class="lib-act">${sv ? `<button class="btn btn-sm btn-ghost" data-lib-undo="${esc(sv.target)}">Undo</button>`
+              : `<button class="btn btn-sm btn-primary" data-lib-save="${i}">Save to library</button>`}</div></div>`;
+        }).join('')}</div><datalist id="lib-folders"></datalist></div>`;
+    }
+    el.innerHTML = html;
+    if (lib.length) {
+      if (!S.libFolders) S.libFolders = await get('/api/library/folders').then((r) => r.folders).catch(() => []);
+      const dl = $('#lib-folders', root);
+      if (dl) dl.innerHTML = S.libFolders.map((f) => `<option value="${esc(f)}">`).join('');
+      for (const inp of $$('[data-lib-folder]', root)) libHint(inp);
+    }
+  }
+  const libKey = (f) => f.trim().replace(/[\\/]+/g, '/').replace(/^\/|\/$/g, '').toLowerCase();
+  function libHint(inp) {
+    const hint = $(`[data-lib-hint="${inp.dataset.libFolder}"]`, root);
+    if (!hint || !S.libFolders) return;
+    const known = S.libFolders.some((f) => libKey(f) === libKey(inp.value));
+    hint.textContent = inp.value.trim() && !known ? 'New folder: it will be created in the library.' : '';
+  }
+
+  async function saveToLibrary(i) {
+    const rv = S.reviews[`${S.stage}:${viewedRound()}`];
+    const l = rv?.library?.[i];
+    if (!l) return;
+    const folder = $(`[data-lib-folder="${i}"]`, root).value.trim();
+    const nameInp = $(`[data-lib-name="${i}"]`, root);
+    const name = nameInp.value.trim();
+    if (S.libFolders && !S.libFolders.some((f) => libKey(f) === libKey(folder))
+      && !confirm(`"${folder}" isn't a folder in the photo library yet. Create it and save the photo there?`)) return;
+    const btn = $(`[data-lib-save="${i}"]`, root); if (btn) btn.disabled = true;
+    try {
+      const r = await post(`/api/jobs/${job.id}/library`, { source: l.source, folder, name, stage: S.stage, round: viewedRound() });
+      job = r;
+      if (r.saved.newFolder) S.libFolders = null;
+      toast(`Saved to the photo library: ${r.saved.target}`);
+      drawPhotos();
+    } catch (e) {
+      toast(e.message, { error: true });
+      if (/already in the library/.test(e.message)) { nameInp.classList.add('bad'); nameInp.focus(); nameInp.select(); }
+      if (btn) btn.disabled = false;
+    }
   }
 
   // ---------- quick edits: prices, names, units, savings applied by the Studio itself (no agent, $0)
@@ -305,6 +461,7 @@ export async function weekView(root, id, stageParam) {
 
   // ---------- rail
   function drawRail() {
+    readDraft(); readPhotoForm(); // keep what's typed in the forms across redraws (live updates redraw the rail)
     const s = st(), el = $('#rail', root), dec = $('#decide', root);
     const def = sdef(S.stage);
     const last = s.rounds.at(-1);
@@ -313,7 +470,7 @@ export async function weekView(root, id, stageParam) {
       const quick = last?.kind === 'quick';
       top = `<div class="state-box running"><b>${quick ? `Studio re-rendering the flyer: round ${last.n}, quick edit, no agent` : s.status === 'running' ? `Agent working on round ${last?.n}` : 'Edits queued'}</b>
         ${job.queuePosition > 1 ? `<div>Waiting behind ${job.queuePosition - 1} other week${job.queuePosition > 2 ? 's' : ''}.</div>` : ''}
-        ${last?.edits?.length ? `<ul style="margin:8px 0 0;padding-left:18px">${last.edits.map((e) => `<li>${txt(e.text)}</li>`).join('')}</ul>` : ''}
+        ${last?.edits?.length ? `<ul style="margin:8px 0 0;padding-left:18px">${last.edits.map((e) => `<li>${e.kind === 'photo' && e.card ? `${txt(e.card)}: ` : ''}${txt(e.text)}${attThumbs(e.images)}</li>`).join('')}</ul>` : ''}
         ${quick ? `<ul style="margin:8px 0 0;padding-left:18px">${(last.quick || []).map((q) => `<li>${txt(q.desc)}</li>`).join('')}</ul>` : ''}</div>`;
     } else if (s.status === 'failed') {
       top = `<div class="state-box failed"><b>Round ${last?.n} failed</b><div>${esc(s.error)}</div>${s.lastLog?.length ? `<pre>${esc(s.lastLog.join('\n'))}</pre>` : ''}</div>`;
@@ -337,15 +494,31 @@ export async function weekView(root, id, stageParam) {
       </div>`;
     }).join('')}</div>` : '';
 
+    const pf = S.photoForm;
     const edits = canEdit() ? `<h2>Your edits <span class="muted" style="font-size:13px;font-weight:500">${pending().length || ''}</span></h2>
       ${pending().length ? `<ol class="edit-list">${pending().map((e, i) => `<li class="edit">
-        <span class="edit-tag k-${e.kind}">${e.kind === 'pin' ? `${i + 1} · p${e.page}` : e.kind === 'card' ? 'Card' : e.kind === 'answer' ? 'Answer' : 'Note'}</span>
-        <span class="edit-text">${e.kind === 'card' ? `<span style="display:block">${txt(e.card)}</span>` : ''}${txt(e.text)}</span>
+        <span class="edit-tag k-${e.kind}">${e.kind === 'pin' ? `${i + 1} · p${e.page}` : esc(tagText(e))}</span>
+        <span class="edit-text">${['card', 'photo'].includes(e.kind) && e.card ? `<span style="display:block">${txt(e.card)}</span>` : ''}${txt(e.text)}${attThumbs(e.images, i)}</span>
         <button class="edit-x" data-rm="${i}" aria-label="Remove edit">×</button>
-        <label class="edit-std"><input type="checkbox" data-std="${i}" ${e.standing ? 'checked' : ''}> Standing rule for every week</label>
-      </li>`).join('')}</ol>` : '<p class="muted" style="font-size:14px;margin:0 0 12px">No edits yet. Pin comments on the pages, edit a card, or write a note.</p>'}
-      <form class="add-note" id="add-note"><textarea class="input" placeholder="General note for the agent" aria-label="General note"></textarea>
-        <button class="btn btn-sm" style="align-self:flex-end">Add note</button></form>` : '';
+        <div class="edit-foot">
+          ${e.kind === 'photo' ? '' : `<label class="edit-std"><input type="checkbox" data-std="${i}" ${e.standing ? 'checked' : ''}> Standing rule for every week</label>`}
+          ${(e.images?.length || 0) < 8 ? `<button type="button" class="att-add" data-attach="${i}">${CLIP} Image</button>` : ''}
+        </div>
+      </li>`).join('')}</ol>` : '<p class="muted" style="font-size:14px;margin:0 0 12px">No edits yet. Pin comments on the pages, edit a card, or write a note. Paste or drop images anywhere here.</p>'}
+      ${pf ? `<form class="add-note photo-form drop-zone" id="photo-form">
+        <h3>Missing item photo</h3>
+        <label>Item, as on the card<input class="input" name="card" dir="auto" value="${esc(pf.card)}" placeholder="هاربيك" aria-label="Item as on the card"></label>
+        <label>Brand, product and size (English)<input class="input" name="text" value="${esc(pf.text)}" placeholder="Harpic Toilet Cleaner 750 ml" aria-label="Brand, product and size"></label>
+        ${pf.images.length ? attDraft(pf.images, 'photo') : '<p class="drop-hint">Drop the photo here, paste it (Ctrl+V), or choose it.</p>'}
+        <div class="add-row"><button type="button" class="btn btn-sm btn-ghost" data-attach="photo">${CLIP} Choose photo</button><span class="grow"></span>
+          <button type="button" class="btn btn-sm btn-ghost" data-photo-cancel>Cancel</button><button class="btn btn-sm btn-primary">Add photo</button></div>
+        <p class="drop-hint">A clean pack shot on white works best. The agent cuts it out and suggests where it goes in the photo library.</p>
+      </form>` : ''}
+      <form class="add-note drop-zone" id="add-note"><textarea class="input" placeholder="General note for the agent. Paste or drop images here." aria-label="General note">${esc(S.draftText || '')}</textarea>
+        ${S.draftImages.length ? attDraft(S.draftImages, 'draft') : ''}
+        <div class="add-row"><button type="button" class="btn btn-sm btn-ghost" data-attach="draft">${CLIP} Attach image</button>
+          ${pf ? '' : '<button type="button" class="btn btn-sm btn-ghost" data-photo-form>+ Missing item photo</button>'}<span class="grow"></span>
+          <button class="btn btn-sm">Add note</button></div></form>` : '';
 
     el.innerHTML = top + questions + edits;
 
@@ -382,10 +555,12 @@ export async function weekView(root, id, stageParam) {
   // ---------- pending edits (saved on the server so they survive a refresh)
   const savePending = debounce(() => api('PUT', `/api/jobs/${job.id}/stages/${S.stage}/pending`, { edits: pending() }).catch((e) => toast(e.message, { error: true })), 300);
   function setPending(list) {
+    readDraft(); readPhotoForm();
     st().pendingEdits = list;
     savePending();
     drawRail();
     refreshPins();
+    drawPhotos();
     const box = $('[data-table]', root); if (box?._rows) drawCards(box);
   }
   function refreshPins() {
@@ -429,6 +604,47 @@ export async function weekView(root, id, stageParam) {
       });
       return;
     }
+    const vi = t.closest('[data-view-img]');
+    if (vi) {
+      const group = $$('[data-view-img]', vi.closest('.att-thumbs, .lib-list') || vi.parentElement);
+      openLightbox({ items: group.map((g) => ({ src: fileUrl(job.id, g.dataset.viewImg), label: g.title || g.dataset.viewImg.split('/').pop(), path: g.dataset.viewImg })), index: Math.max(0, group.indexOf(vi)), pinnable: false });
+      return;
+    }
+    const at = t.closest('[data-attach]');
+    if (at) { const v = at.dataset.attach; return pickFiles(v === 'draft' || v === 'photo' ? v : +v); }
+    if (t.closest('[data-photo-form]')) return openPhotoForm();
+    if (t.closest('[data-photo-cancel]')) { S.photoForm = null; readDraft(); return drawRail(); }
+    const ms = t.closest('[data-missing]');
+    if (ms) {
+      const m = S.reviews[`${S.stage}:${viewedRound()}`]?.missing?.[+ms.dataset.missing];
+      if (!m) return;
+      openPhotoForm({ card: m.card || m.en, text: m.en || '' });
+      return pickFiles('photo');
+    }
+    const ri = t.closest('[data-rm-img]');
+    if (ri) {
+      const [i, j] = ri.dataset.rmImg.split(':').map(Number);
+      const l = pending().slice(); const imgs = (l[i].images || []).filter((_, k) => k !== j);
+      if (l[i].kind === 'photo' && !imgs.length) { if (!confirm('This removes the photo edit. Remove it?')) return; l.splice(i, 1); }
+      else l[i] = { ...l[i], images: imgs };
+      return setPending(l);
+    }
+    const rd = t.closest('[data-rm-draft]');
+    if (rd) {
+      const [where, j] = rd.dataset.rmDraft.split(':');
+      if (where === 'photo' && S.photoForm) { readPhotoForm(); S.photoForm.images.splice(+j, 1); } else { readDraft(); S.draftImages.splice(+j, 1); }
+      return drawRail();
+    }
+    const ls = t.closest('[data-lib-save]');
+    if (ls) return saveToLibrary(+ls.dataset.libSave);
+    const lu = t.closest('[data-lib-undo]');
+    if (lu) {
+      const target = lu.dataset.libUndo;
+      if (!confirm(`Take "${target}" out of the photo library? It's moved to data/trash/library, not deleted.`)) return;
+      try { job = await post(`/api/jobs/${job.id}/library/undo`, { target }); toast('Removed from the photo library'); drawPhotos(); }
+      catch (err) { toast(err.message, { error: true }); }
+      return;
+    }
     const ec = t.closest('[data-edit-card]');
     if (ec) { S.editingCard = ec.dataset.editCard; const box = $('[data-table]', root); drawCards(box); return; }
     const rm = t.closest('[data-rm]');
@@ -453,6 +669,8 @@ export async function weekView(root, id, stageParam) {
 
   root.addEventListener('input', (e) => {
     if (e.target.classList.contains('qin')) return onQuickInput(e.target);
+    if (e.target.dataset.libFolder != null) return libHint(e.target);
+    if (e.target.dataset.libName != null) e.target.classList.remove('bad');
     if (e.target.id === 'quick-filter') {
       S.qfilter = e.target.value;
       drawQuickTable();
@@ -466,18 +684,72 @@ export async function weekView(root, id, stageParam) {
   }, true);
 
   root.addEventListener('change', (e) => {
-    const std = e.target.closest('[data-std]');
+    const t = e.target;
+    if (t.id === 'att-file') { const files = [...t.files]; t.value = ''; if (files.length) addImages(files); return; }
+    const std = t.closest('[data-std]');
     if (std) { const l = pending().slice(); l[+std.dataset.std] = { ...l[+std.dataset.std], standing: std.checked }; setPending(l); }
+    if (t.dataset.imgRole) {
+      const [i, j] = t.dataset.imgRole.split(':').map(Number);
+      const l = pending().slice(); const imgs = l[i].images.slice(); imgs[j] = { ...imgs[j], role: t.value };
+      l[i] = { ...l[i], images: imgs }; setPending(l);
+    }
+    if (t.dataset.draftRole) S.draftImages[+t.dataset.draftRole].role = t.value;
+  });
+
+  // paste (Ctrl+V) and drop images anywhere in the edits rail or on the missing-photos list
+  const imageFiles = (dt) => [...(dt?.files || [])].filter((f) => /^image\//.test(f.type) || /\.(png|jpe?g|webp|heic)$/i.test(f.name));
+  const targetFor = (el) => (el?.closest('#photo-form') ? 'photo' : el?.closest('.edit') ? +($('[data-attach]', el.closest('.edit'))?.dataset.attach ?? NaN) : null);
+  // on the document: with nothing focused a paste goes to <body>, outside this view
+  const onPaste = (e) => {
+    const files = imageFiles(e.clipboardData);
+    if (!files.length || !canEdit() || !$('#lightbox').hidden) return;
+    const el = e.target instanceof Element ? e.target : null;
+    if (el && !root.contains(el) && el !== document.body) return;
+    e.preventDefault();
+    const tg = targetFor(el);
+    addImages(files, Number.isNaN(tg) ? null : tg);
+  };
+  document.addEventListener('paste', onPaste);
+  root.addEventListener('dragover', (e) => {
+    if (!canEdit() || ![...(e.dataTransfer?.types || [])].includes('Files') || !e.target.closest('.rail, #photos')) return;
+    e.preventDefault();
+    root.querySelector('.rail')?.classList.add('dropping');
+    e.target.closest('.drop-zone, .edit')?.classList.add('drop-over');
+  });
+  root.addEventListener('dragleave', (e) => {
+    e.target.closest?.('.drop-zone, .edit')?.classList.remove('drop-over');
+    if (!e.relatedTarget || !root.querySelector('.rail')?.contains(e.relatedTarget)) root.querySelector('.rail')?.classList.remove('dropping');
+  });
+  root.addEventListener('drop', (e) => {
+    const files = imageFiles(e.dataTransfer);
+    root.querySelector('.rail')?.classList.remove('dropping');
+    $$('.drop-over', root).forEach((x) => x.classList.remove('drop-over'));
+    if (!files.length || !canEdit() || !e.target.closest('.rail, #photos')) return;
+    e.preventDefault();
+    const tg = targetFor(e.target);
+    addImages(files, Number.isNaN(tg) ? null : tg);
   });
 
   root.addEventListener('submit', (e) => {
     e.preventDefault();
     const f = e.target;
+    if (f.id === 'photo-form') {
+      readPhotoForm();
+      const p = S.photoForm;
+      if (!p.images.length) { toast('Add the photo first: drop it, paste it, or choose it.', { error: true }); return; }
+      if (!p.card.trim() && !p.text.trim()) { toast('Say which item the photo is for.', { error: true }); return f.elements.card.focus(); }
+      S.photoForm = null;
+      return setPending([...pending(), { kind: 'photo', card: p.card.trim() || p.text.trim(), text: p.text.trim(), images: p.images }]);
+    }
     const input = $('input, textarea', f);
     const text = input?.value.trim();
+    if (f.id === 'add-note') {
+      if (!text && !S.draftImages.length) return input?.focus();
+      const images = S.draftImages; S.draftImages = []; S.draftText = ''; input.value = '';
+      return setPending([...pending(), { kind: 'general', text, images }]);
+    }
     if (!text) return input?.focus();
-    if (f.id === 'add-note') setPending([...pending(), { kind: 'general', text }]);
-    else if (f.dataset.answer) setPending([...pending(), { kind: 'answer', qid: f.dataset.answer, text }]);
+    if (f.dataset.answer) setPending([...pending(), { kind: 'answer', qid: f.dataset.answer, text }]);
     else if (f.dataset.card) { S.editingCard = null; setPending([...pending(), { kind: 'card', card: f.dataset.card, text }]); }
   });
   root.addEventListener('keydown', (e) => {
@@ -522,7 +794,7 @@ export async function weekView(root, id, stageParam) {
   if (['running', 'editing'].includes(st().status)) $('#log', root).open = true;
   await redraw();
   window.addEventListener('resize', placeThumbPins);
-  return () => { close(); window.removeEventListener('resize', placeThumbPins); };
+  return () => { close(); window.removeEventListener('resize', placeThumbPins); document.removeEventListener('paste', onPaste); };
 }
 
 function loadQuick(id) {

@@ -20,6 +20,8 @@ export function defaults(config) {
     inbox: { enabled: true },
     notifications: { toast: true, browser: true, telegram: false, on: { review: true, question: true, failed: true, done: true, inbox: true, reminder: true } },
     agent: { mode: config.agentMode, model: process.env.AGENT_MODEL || 'claude-opus-5-5', effort: process.env.AGENT_EFFORT || 'high', maxBudgetUsd: +(process.env.AGENT_MAX_BUDGET_USD || 15) },
+    // First-run Setup page (#/setup): shown until the folders are confirmed once on this PC.
+    setup: { done: false, at: null },
   };
 }
 

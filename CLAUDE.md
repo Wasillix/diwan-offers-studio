@@ -43,8 +43,10 @@ D:\Diwan\005 - FMCG Items\001 - Isolated Items\   Product photo library (read-on
 - Run Python with `PYTHONUTF8=1` (Arabic file writes crash under cp1252 otherwise).
 - Never edit the original toolkit in `D:\Diwan\Claude outputs\Pipeline\`; work on `toolkit/` and copy it
   into each job's `build/`.
-- The image library under `005 - FMCG Items` is read-only. Cut-outs go to the job's `build/img/` and are
-  promoted to `toolkit/img/` only after the week is approved.
+- The image library under `005 - FMCG Items` is read-only for the agent and for scripts. Cut-outs go to the
+  job's `build/img/` and are promoted to `toolkit/img/` only after the week is approved. The one exception
+  (Waseem's decision, 23 Nov 2026): `server/library.js` copies a new product photo into the library when
+  Waseem clicks **Save to library** on a week. Never overwrite, stay inside the library, log every save.
 - Keep it simple: Express + plain JS/HTML is fine. Add a framework only if the UI really needs it.
 - Secrets in `.env` (git-ignored). No keys in code.
 - Test with `AGENT_MODE=mock` (canned stage results) before spending real agent runs.
@@ -57,6 +59,23 @@ D:\Diwan\005 - FMCG Items\001 - Isolated Items\   Product photo library (read-on
 - `npm run test:engine`: state machine, runner + mock agent, HTTP API (~3 s)
 - `npm run smoke`: toolkit only (flyer, carousel, 16:9) for every look in `toolkit/themes/`, builds in `data/smoke/<look>/`
 - `npm run smoke:full`: same plus final PNGs, flattened PDF, mobile HTML and the MP4 (~1 min)
+
+## Images on edits, missing photos, the library, Setup
+
+- `attachments.js`: `POST /api/jobs/:id/attachments` (one image, ≤25 MB) → `attachments/<stage>/<stamp>-<slug>.<ext>`,
+  extension from the bytes (PNG/JPG/WebP; HEIC refused with a hint). Any edit can carry
+  `images: [{ path, role: markup|photo|reference }]`; kind `photo` = a missing item's photo (needs an image).
+  `editLine(e, jobDir)` gives the agent absolute paths; `editPrompt` adds the attachment rules only when images exist.
+- review.json gained optional `missing` (items with no photo → "Attach photo" buttons) and `library`
+  (cut-out + suggested folder + name). Bad entries are dropped into `review.warnings` (logged), never fail a round.
+- `library.js`: `POST /api/jobs/:id/library` copies with `COPYFILE_EXCL` (409 `exists` → pick another name),
+  records `job.library[]` and `data/library-log.jsonl`; `…/library/undo` moves a Studio-added, unchanged file to
+  `data/trash/library/`. `GET /api/library/folders` feeds the folder suggestions (two levels).
+- Setup: `settings.setup.done`; the UI router sends every page to `#/setup` until Finish (`POST /api/setup`).
+  `POST /api/system/pick-folder` opens the Windows FolderBrowserDialog through PowerShell (`system.js pickFolder`,
+  args via env vars, `-EncodedCommand`); tests inject `pickFolderImpl`. `POST /api/system/folder-check` counts photos.
+- The mock agent lists 2 `missing` items on Images and turns attached photos into `library` suggestions.
+  Careful: a mock server still points at the real photo library, so don't click Save there.
 
 ## Engine notes (server/)
 

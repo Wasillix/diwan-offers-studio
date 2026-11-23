@@ -36,3 +36,28 @@ the stage shows as failed.
 - Images in a gallery are shown in `files` order: name them so they sort (page-01, page-02…).
 - `checks` keys are free-form; numbers and short strings only.
 - Keep `questions` ids stable across rounds (q1 stays q1 until answered).
+
+## Missing photos and new library photos (optional fields)
+
+```json
+{
+  "missing": [
+    {"card": "هاربيك", "en": "Harpic Toilet Cleaner 750 ml", "codes": ["HHLDS-0412"], "why": "no photo in the library"}
+  ],
+  "library": [
+    {"source": "build/img/harpic-750.png", "folder": "Hygiene & Self Care", "name": "Harpic Toilet Cleaner Original 750 ML.png", "card": "هاربيك"}
+  ]
+}
+```
+
+- `missing`: every card item with no usable photo (none found, or the wrong product). Fill it in the images
+  stage and in any later round where photos are still missing. The Studio shows each row with an
+  **Attach photo** button, so keep `card` as the Arabic name on the card. Low-res or wrong-size photos that
+  still work go in the client list, not here.
+- `library`: one entry per new product photo Waseem attached this round. `source` is the cleaned cut-out
+  (transparent PNG, usually `build/img/<slug>.png`), relative to the job folder. `folder` is the photo
+  library folder it belongs in, relative to the library (`Dairy & Eggs/Labneh`); use an existing folder
+  whenever one fits (look with Glob). `name` follows the library's style: `Brand Product Variant Size.png`,
+  English, as on the pack (`Cafe Mio Latte Vanilla 250 ML.png`). Never write to the library yourself: the
+  Studio copies the file when Waseem clicks Save.
+- A bad entry in these two lists is dropped with a warning in the log; it doesn't fail the round.

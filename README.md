@@ -20,7 +20,16 @@ Open it at **http://localhost:4321**.
    - **Answer questions** in the right panel. Red ones block the work.
    - Add a **note** for anything general. Tick **Standing rule** when it should apply every week from now on
      (the agent adds it to the brand rules).
-   - **Send edits** for another round, or **Approve** to move on. **Compare rounds** shows what changed.
+   - **Attach images** to any comment: paste (Ctrl+V), drop the file on the Edits panel, or click **Attach image** /
+     **Image**. Mark each one as *Markup* (the client's screenshot with their marks), *Photo* (a product photo to use)
+     or *Reference* (something to match, not to put on the flyer). JPG, PNG or WebP; iPhone HEIC needs converting.
+   - **Missing item photo**: on the Images stage each item without a photo has **Attach photo**; or use
+     **+ Missing item photo** in the Edits panel. The agent cuts it out and puts it on the card next round.
+   - **New photos for the photo library**: after that round, check the folder and file name the agent suggests
+     and click **Save to library**. The Studio copies it into the photo library, never overwrites a file, and
+     **Undo** takes it back out (to `data\trash\library`). Every save is listed in `data\library-log.jsonl`.
+   - **Send edits** for another round, or **Approve** to move on. **Compare rounds** shows what changed, and each
+     round shows the edits (and images) that produced it.
 4. **Delivery**: after the last approval the files are in `D:\Diwan\Claude outputs\<TAG>\`. The mobile page
    and the Design canvas still get published from claude.ai.
 
@@ -55,7 +64,11 @@ npm run dev
 
 Weekly reminder (day, time, time zone), Offers Inbox on/off, notifications (Windows, browser, Telegram),
 new-week defaults (look, deliverables, tasks), the agent (real or mock, model, effort, budget per run),
-folders, Start with Windows, and system checks.
+folders (each with **Browse…**), Start with Windows, and system checks.
+
+The first time the Studio opens on a PC it shows **Set up the Studio on this PC**: pick the photo library, the
+logos, the Offers Inbox and Claude outputs (it counts the photos so you can tell it's the right folder).
+**Settings → Folders → Run setup again** brings it back.
 
 **Telegram on your phone** (optional): create a bot with @BotFather, then put its token and your chat id in
 `.env` and restart:
