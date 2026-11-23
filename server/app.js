@@ -6,6 +6,7 @@ import path from 'node:path';
 import * as M from './machine.js';
 import { STAGES, DELIVERABLES, STAGE_KEYS } from './stages.js';
 import { makeTag } from './store.js';
+import { QUICK_STAGES, readCards, planChanges } from './quick.js';
 
 import { DEFAULT_TASKS } from './settings.js';
 import { toolChecks, folderChecks, authStatus } from './system.js';
@@ -225,6 +226,21 @@ export function createApp({ config, store, runner, settings, notifier, scheduler
     const rerun = M.reopen(job, stage, body.edits);
     store.log(job.id, { type: 'app', stage, text: `Reopened ${stage}${rerun.length ? `; will rebuild ${rerun.join(', ')}` : ''}` });
     return { rerun };
+  }));
+
+  // ---- quick edits (server/quick.js): prices, names, units, savings applied by the Studio, no agent
+  app.get('/api/jobs/:id/cards', route(async (req) => readCards(store.dir(load(req).id, 'build'))));
+  app.post('/api/jobs/:id/stages/:stage/quick', route(async (req) => {
+    let job = load(req); const stage = stageOf(req, job);
+    if (!QUICK_STAGES.includes(stage)) throw new M.MachineError(`quick edits are only for the ${QUICK_STAGES.join(', ')} stage`, 400);
+    if (job.stages[stage].status !== 'awaiting_review') throw new M.MachineError(`stage "${stage}" is ${job.stages[stage].status}; quick edits need it awaiting review`);
+    const planned = planChanges(req.body?.changes, await readCards(store.dir(job.id, 'build')));
+    job = load(req); // fresh copy after the async read
+    const round = M.queueQuick(job, stage, planned);
+    store.log(job.id, { type: 'app', stage, text: `Quick edit queued (${planned.length} card${planned.length > 1 ? 's' : ''}, no agent)` });
+    const v = save(job);
+    runner.kick(job.id);
+    return { ...v, quickRound: round.n };
   }));
 
   // ---- live updates (SSE): /api/events (all weeks) and /api/jobs/:id/events (one week + its log)

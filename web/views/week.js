@@ -18,6 +18,10 @@ export async function weekView(root, id, stageParam) {
     reviews: {},        // `${stage}:${round}` → review
     log: await get(`/api/jobs/${id}/log?limit=400`),
     editingCard: null,
+    quick: loadQuick(id),  // unsent quick edits: card key → { field: value } (kept in this browser)
+    quickOpen: false,
+    qcards: null,          // the week's cards for the quick-edit table
+    qfilter: '',
   };
   const stages = meta.stages;
   const sdef = (k) => stages.find((s) => s.key === k);
@@ -78,7 +82,7 @@ export async function weekView(root, id, stageParam) {
     const head = `<div class="proof-head">
       <div><h2>${esc(def.label)}</h2><div class="muted" style="margin-top:2px">${esc(def.short)}</div></div>
       ${rounds.length ? `<div class="rounds" role="group" aria-label="Rounds">
-        ${rounds.map((r) => `<button data-round="${r.n}" aria-pressed="${r.n === n && !S.compare}">Round ${r.n}</button>`).join('')}
+        ${rounds.map((r) => `<button data-round="${r.n}" aria-pressed="${r.n === n && !S.compare}" ${r.kind === 'quick' ? 'title="Quick edit by the Studio, no agent"' : ''}>Round ${r.n}${r.kind === 'quick' ? ' · quick' : ''}</button>`).join('')}
         ${rounds.length > 1 ? `<span class="sep"></span><button data-compare aria-pressed="${!!S.compare}">${S.compare ? `Comparing R${S.compare} ↔ R${n}` : 'Compare rounds'}</button>` : ''}
       </div>` : ''}
     </div>`;
@@ -106,9 +110,99 @@ export async function weekView(root, id, stageParam) {
         ${rv.assumptions?.length ? `<div class="note assume"><h3>Assumptions</h3><ul>${rv.assumptions.map((c) => `<li>${txt(c)}</li>`).join('')}</ul></div>` : ''}
         ${rv.rules_added?.length ? `<div class="note rules"><h3>Brand rules added</h3><ul>${rv.rules_added.map((c) => `<li>${txt(c)}</li>`).join('')}</ul></div>` : ''}
       </div>
+      ${quickOn() ? '<div id="quick"></div>' : ''}
       <div id="files"></div>`;
+    if (quickOn()) drawQuick();
     await drawFiles($('#files', el), rv, cmp);
   }
+
+  // ---------- quick edits: prices, names, units, savings applied by the Studio itself (no agent, $0)
+  function quickOn() {
+    return S.stage === 'flyer' && st().status === 'awaiting_review' && !S.compare && (!S.round || S.round === finishedRounds().at(-1)?.n);
+  }
+  const QF = [['ar', 'Arabic name', 1], ['en', 'English name', 0], ['u_ar', 'Unit', 1], ['u_en', 'Unit (EN)', 0], ['price', 'Price', 0], ['saving', 'Saving', 0]];
+  const priceText = (c) => (c.price == null ? '' : c.lbp ? Math.round(c.price).toLocaleString('en-US').replace(/,/g, '.') : (+c.price).toFixed(2));
+  const savingText = (c) => (c.save_txt != null ? c.save_txt : c.saving == null ? '' : String(c.saving));
+  const origOf = (c, f) => (f === 'price' ? priceText(c) : f === 'saving' ? savingText(c) : c[f] || '');
+  const quickCount = () => Object.keys(S.quick).length;
+
+  async function drawQuick() {
+    const el = $('#quick', root);
+    if (!el) return;
+    const n = quickCount();
+    el.innerHTML = `<details class="fileblock quick" id="quick-box" ${S.quickOpen || n ? 'open' : ''}>
+      <summary><h3>Quick edits</h3><span class="muted">Change a price, name, unit or saving without the agent: the Studio re-renders the flyer in about 15 s, $0.</span></summary>
+      <div class="quick-body" id="quick-body">${S.quickOpen || n ? 'Loading the cards…' : ''}</div></details>`;
+    if (S.quickOpen || n) await loadQuickCards();
+  }
+
+  async function loadQuickCards() {
+    const body = $('#quick-body', root);
+    try { S.qcards = await get(`/api/jobs/${job.id}/cards`); } catch (e) { if (body) body.innerHTML = `<p class="muted">${esc(e.message)}</p>`; return; }
+    const keys = new Set(S.qcards.map((c) => c.key));
+    for (const k of Object.keys(S.quick)) if (!keys.has(k)) delete S.quick[k];
+    saveQuick();
+    drawQuickTable();
+  }
+
+  function drawQuickTable() {
+    const body = $('#quick-body', root);
+    if (!body || !S.qcards) return;
+    const q = S.qfilter.trim().toLowerCase();
+    const rows = S.qcards.filter((c) => !q || [c.ar, c.en, c.key, c.section_ar, c.section_en].some((v) => String(v || '').toLowerCase().includes(q)));
+    let sec = null, out = '';
+    for (const c of rows) {
+      if (c.section !== sec) { sec = c.section; out += `<tr class="sec"><td colspan="7">${txt(c.section_ar || c.section)} <span class="muted" style="font-weight:500">· ${esc(c.section_en || c.section)}</span></td></tr>`; }
+      const ed = S.quick[c.key] || {};
+      out += `<tr class="${S.quick[c.key] ? 'edited' : ''}"><td class="num muted">${c.n}</td>${QF.map(([f, label, rtl]) => {
+        if (f === 'price' && c.noprice) return '<td class="muted" style="font-size:12.5px">Badge only</td>';
+        const v = f in ed ? ed[f] : origOf(c, f);
+        const unit = f === 'price' ? (c.lbp ? 'L.L' : '$') : f === 'saving' && c.save_txt == null ? '%' : '';
+        return `<td class="q-${f}"><span class="qwrap"><input class="input qin ${f in ed ? 'changed' : ''}" data-key="${esc(c.key)}" data-f="${f}" value="${esc(v)}"
+          ${rtl ? 'dir="rtl"' : ''} ${f === 'price' ? 'inputmode="decimal"' : ''} aria-label="${esc(label)} for ${esc(c.en || c.ar)}"
+          title="${f === 'price' && c.lbp ? 'L.L.: dots are thousands, e.g. 550.000' : f === 'saving' && c.save_txt == null ? 'Whole number 10–90, empty for no badge' : esc(label)}">${unit ? `<i>${unit}</i>` : ''}</span>
+          ${f === 'en' ? `<div class="codes num">${esc(c.key)}</div>` : ''}</td>`;
+      }).join('')}</tr>`;
+    }
+    body.innerHTML = `<div class="quick-tools"><input class="input" id="quick-filter" placeholder="Find a card (name, code, section)" value="${esc(S.qfilter)}" aria-label="Find a card">
+        <span class="muted" style="font-size:13px">Layout, photos and anything else: pin it on the page and use Send edits (the agent).</span></div>
+      <div class="cards-wrap"><table class="cards quick-table"><thead><tr><th>#</th>${QF.map(([, l]) => `<th>${l}</th>`).join('')}</tr></thead><tbody>${out || '<tr><td colspan="7" class="muted">No card matches.</td></tr>'}</tbody></table></div>
+      <div class="quick-bar"><span id="quick-count"></span><button class="btn btn-sm btn-ghost" id="quick-reset">Undo all</button><button class="btn btn-sm btn-primary" id="quick-apply">Apply quick edits</button></div>`;
+    updateQuickBar();
+  }
+
+  function updateQuickBar() {
+    const n = quickCount();
+    const cnt = $('#quick-count', root); if (cnt) cnt.textContent = n ? `${n} card${n > 1 ? 's' : ''} changed` : 'No changes yet';
+    const ap = $('#quick-apply', root); if (ap) ap.disabled = !n;
+    const rs = $('#quick-reset', root); if (rs) rs.disabled = !n;
+  }
+
+  function onQuickInput(inp) {
+    const c = S.qcards?.find((x) => x.key === inp.dataset.key);
+    if (!c) return;
+    const f = inp.dataset.f;
+    const ed = { ...(S.quick[c.key] || {}) };
+    if (inp.value.trim() === origOf(c, f)) delete ed[f]; else ed[f] = inp.value;
+    if (Object.keys(ed).length) S.quick[c.key] = ed; else delete S.quick[c.key];
+    inp.classList.toggle('changed', f in ed);
+    inp.closest('tr').classList.toggle('edited', !!S.quick[c.key]);
+    saveQuick();
+    updateQuickBar();
+  }
+
+  async function applyQuick() {
+    const changes = Object.entries(S.quick).map(([key, f]) => ({ key, ...f }));
+    if (!changes.length) return;
+    const btn = $('#quick-apply', root); if (btn) btn.disabled = true;
+    try {
+      job = await post(`/api/jobs/${job.id}/stages/flyer/quick`, { changes });
+      S.quick = {}; saveQuick();
+      toast(`Quick edit running: round ${job.quickRound}, about 15 s`);
+      redraw();
+    } catch (err) { toast(err.message, { error: true }); if (btn) btn.disabled = false; }
+  }
+  function saveQuick() { try { localStorage.setItem(`diwan-quick:${job.id}`, JSON.stringify(S.quick)); } catch { /* private mode */ } }
 
   async function drawFiles(el, rv, cmp) {
     const files = rv.files || [];
@@ -198,7 +292,7 @@ export async function weekView(root, id, stageParam) {
         <td class="ar" dir="rtl">${esc(r.ar)}</td>
         <td>${esc(r.en)}<div class="codes num">${esc((r.codes || []).join(' '))}</div></td>
         <td>${txt(r.unit)}</td>
-        <td class="price num ${r.price == null ? 'missing' : ''}">${r.price == null ? 'missing' : `${(+r.price).toFixed(2)}$`}</td>
+        <td class="price num ${r.price == null ? 'missing' : ''}">${r.price == null ? 'missing' : r.currency === 'L.L' ? `${Math.round(r.price).toLocaleString('en-US').replace(/,/g, '.')}L.L` : `${(+r.price).toFixed(2)}$`}</td>
         <td class="num">${esc(r.saving || '')}</td>
         <td>${editable ? (S.editingCard === key
           ? `<form class="row-edit" data-card="${esc(key)}"><input class="input" placeholder="What should change?" aria-label="Edit for ${esc(key)}"><button class="btn btn-sm btn-mark">Add</button></form>`
@@ -216,9 +310,11 @@ export async function weekView(root, id, stageParam) {
     const last = s.rounds.at(-1);
     let top = '';
     if (s.status === 'running' || s.status === 'editing') {
-      top = `<div class="state-box running"><b>${s.status === 'running' ? `Agent working on round ${last?.n}` : 'Edits queued'}</b>
+      const quick = last?.kind === 'quick';
+      top = `<div class="state-box running"><b>${quick ? `Studio re-rendering the flyer: round ${last.n}, quick edit, no agent` : s.status === 'running' ? `Agent working on round ${last?.n}` : 'Edits queued'}</b>
         ${job.queuePosition > 1 ? `<div>Waiting behind ${job.queuePosition - 1} other week${job.queuePosition > 2 ? 's' : ''}.</div>` : ''}
-        ${last?.edits?.length ? `<ul style="margin:8px 0 0;padding-left:18px">${last.edits.map((e) => `<li>${txt(e.text)}</li>`).join('')}</ul>` : ''}</div>`;
+        ${last?.edits?.length ? `<ul style="margin:8px 0 0;padding-left:18px">${last.edits.map((e) => `<li>${txt(e.text)}</li>`).join('')}</ul>` : ''}
+        ${quick ? `<ul style="margin:8px 0 0;padding-left:18px">${(last.quick || []).map((q) => `<li>${txt(q.desc)}</li>`).join('')}</ul>` : ''}</div>`;
     } else if (s.status === 'failed') {
       top = `<div class="state-box failed"><b>Round ${last?.n} failed</b><div>${esc(s.error)}</div>${s.lastLog?.length ? `<pre>${esc(s.lastLog.join('\n'))}</pre>` : ''}</div>`;
     } else if (s.status === 'approved') {
@@ -349,9 +445,25 @@ export async function weekView(root, id, stageParam) {
       if (n) { st().pendingEdits = []; await api('PUT', `/api/jobs/${job.id}/stages/${S.stage}/pending`, { edits: [] }); }
       return act('approve', {}, `${sdef(S.stage).label} approved`);
     }
+    if (t.id === 'quick-apply') return applyQuick();
+    if (t.id === 'quick-reset') { S.quick = {}; saveQuick(); return drawQuickTable(); }
     if (t.id === 'retry') return act('retry', {}, 'Retrying');
     if (t.id === 'cancel') { await post(`/api/jobs/${job.id}/cancel`); return toast('Cancelling the run'); }
   });
+
+  root.addEventListener('input', (e) => {
+    if (e.target.classList.contains('qin')) return onQuickInput(e.target);
+    if (e.target.id === 'quick-filter') {
+      S.qfilter = e.target.value;
+      drawQuickTable();
+      const f = $('#quick-filter', root); f.focus(); f.setSelectionRange(f.value.length, f.value.length);
+    }
+  });
+  root.addEventListener('toggle', (e) => {
+    if (e.target.id !== 'quick-box') return;
+    S.quickOpen = e.target.open;
+    if (S.quickOpen && !$('#quick-body table', root)) loadQuickCards();
+  }, true);
 
   root.addEventListener('change', (e) => {
     const std = e.target.closest('[data-std]');
@@ -411,6 +523,10 @@ export async function weekView(root, id, stageParam) {
   await redraw();
   window.addEventListener('resize', placeThumbPins);
   return () => { close(); window.removeEventListener('resize', placeThumbPins); };
+}
+
+function loadQuick(id) {
+  try { return JSON.parse(localStorage.getItem(`diwan-quick:${id}`)) || {}; } catch { return {}; }
 }
 
 function lastActive(job) {

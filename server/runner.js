@@ -5,6 +5,7 @@ import * as M from './machine.js';
 import { promptFor } from './prompts.js';
 import { readAndValidate } from './review.js';
 import { STAGE_KEYS } from './stages.js';
+import { runQuick } from './quick.js';
 
 const agentInfo = (init) => ({
   model: init.model, apiKeySource: init.apiKeySource, version: init.version,
@@ -12,10 +13,11 @@ const agentInfo = (init) => ({
 });
 
 export class Runner extends EventEmitter {
-  constructor({ store, agent }) {
+  constructor({ store, agent, quick = runQuick }) {
     super();
     this.store = store;
     this.agent = agent;
+    this.quick = quick; // quick-edit rounds: the Studio re-renders itself, no agent
     this.queue = [];
     this.active = null; // { jobId, stage, controller }
     this._idle = [];
@@ -114,16 +116,21 @@ export class Runner extends EventEmitter {
     const controller = new AbortController();
     this.active = { jobId, stage, controller };
     const jobDir = this.store.dir(jobId);
-    const { prompt, resume } = promptFor(job, stage, round, jobDir);
-    this._log(jobId, { type: 'app', stage, round: round.n, text: `▶ ${stage} · round ${round.n}${round.kind === 'rerun' ? ' (rebuild)' : ''}` });
+    const isQuick = round.kind === 'quick';
+    this._log(jobId, { type: 'app', stage, round: round.n, text: `▶ ${stage} · round ${round.n}${round.kind === 'rerun' ? ' (rebuild)' : isQuick ? ' (quick edit, no agent)' : ''}` });
     let result, error;
+    const onMessage = (m) => this._log(jobId, { stage, round: round.n, ...m });
     try {
-      result = await this.agent.run({
-        job, stage, round, prompt, resume, jobDir,
-        sessionId: resume ? s.sessionId : undefined,
-        signal: controller.signal,
-        onMessage: (m) => this._log(jobId, { stage, round: round.n, ...m }),
-      });
+      if (isQuick) result = await this.quick({ job, stage, round, jobDir, signal: controller.signal, onMessage });
+      else {
+        const { prompt, resume } = promptFor(job, stage, round, jobDir);
+        result = await this.agent.run({
+          job, stage, round, prompt, resume, jobDir,
+          sessionId: resume ? s.sessionId : undefined,
+          signal: controller.signal,
+          onMessage,
+        });
+      }
     } catch (e) {
       error = controller.signal.aborted ? 'Cancelled' : (e?.message || String(e));
       result = { sessionId: e?.sessionId, cost: e?.cost || 0 }; // a failed real run still costs money

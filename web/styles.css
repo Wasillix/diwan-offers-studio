@@ -348,3 +348,26 @@ table.cards .codes{color:var(--mute);font-size:12px}
 .ok-dot.yes{background:var(--ok)}
 .ok-dot.no{background:var(--mark)}
 @media (max-width:700px){.row3,.seg{grid-template-columns:1fr}.kv{flex-direction:column;gap:2px}.kv span:last-child{text-align:left}}
+
+/* quick edits (flyer stage): price / name / unit / saving without the agent */
+details.quick{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:0}
+details.quick > summary{cursor:pointer;list-style:none;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;padding:12px 14px}
+details.quick > summary::-webkit-details-marker{display:none}
+details.quick > summary h3{margin:0;font-size:16px}
+details.quick > summary h3::before{content:'▸ ';color:var(--mute)}
+details.quick[open] > summary h3::before{content:'▾ '}
+details.quick > summary .muted{font-size:13px}
+.quick-body{padding:0 14px 14px}
+.quick-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin-bottom:10px}
+.quick-tools .input{max-width:320px}
+table.quick-table td{padding:5px 6px}
+table.quick-table .qwrap{display:flex;align-items:center;gap:4px}
+table.quick-table .qwrap i{font-style:normal;color:var(--mute);font-size:12.5px}
+table.quick-table .input{padding:6px 8px;font-size:14px;min-width:0}
+table.quick-table .input[dir=rtl]{font-size:15px;text-align:right}
+table.quick-table .input.changed{border-color:var(--mark);background:var(--mark-soft)}
+table.quick-table td.q-ar{min-width:190px} table.quick-table td.q-en{min-width:170px}
+table.quick-table td.q-u_ar,table.quick-table td.q-u_en{width:100px}
+table.quick-table td.q-price{width:120px} table.quick-table td.q-saving{width:90px}
+.quick-bar{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:10px;font-size:14px}
+.quick-bar #quick-count{margin-right:auto;color:var(--ink-2)}

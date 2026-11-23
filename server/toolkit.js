@@ -1,6 +1,6 @@
 // Toolkit helpers shared by the smoke test and the job runner:
 // find Python, copy the toolkit into a build folder, write offer.json, run a toolkit script.
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -51,6 +51,34 @@ export function runScript(dir, script, args = [], { timeout = 300_000 } = {}) {
   }
   const r = spawnSync(cmd, argv, { cwd: dir, env: toolkitEnv(), encoding: 'utf8', timeout, maxBuffer: 64 * 1024 * 1024 });
   return { code: r.status, stdout: r.stdout || '', stderr: r.stderr || (r.error ? String(r.error) : ''), ok: r.status === 0 };
+}
+
+/** Async runScript (keeps the server responsive during renders). `script` may be an absolute path.
+ *  `signal` aborts the child process. Resolves { code, stdout, stderr, ok }. */
+export function runScriptAsync(dir, script, args = [], { timeout = 300_000, signal } = {}) {
+  const file = path.isAbsolute(script) ? script : path.join(dir, script);
+  let cmd, argv;
+  if (script.endsWith('.py')) { const py = detectPython(); cmd = py.cmd; argv = [...py.pre, file, ...args]; }
+  else { cmd = process.execPath; argv = [file, ...args]; }
+  return new Promise((resolve) => {
+    if (signal?.aborted) return resolve({ code: null, stdout: '', stderr: 'Cancelled', ok: false, aborted: true });
+    const child = spawn(cmd, argv, { cwd: dir, env: toolkitEnv(), windowsHide: true });
+    let stdout = '', stderr = '', done = false;
+    child.stdout.setEncoding('utf8').on('data', (d) => { stdout += d; });
+    child.stderr.setEncoding('utf8').on('data', (d) => { stderr += d; });
+    const kill = () => { try { child.kill(); } catch { /* gone */ } };
+    const timer = setTimeout(() => { stderr += `\nTimed out after ${timeout / 1000} s`; kill(); }, timeout);
+    const onAbort = () => { stderr += '\nCancelled'; kill(); };
+    signal?.addEventListener('abort', onAbort, { once: true });
+    const finish = (code, err) => {
+      if (done) return; done = true;
+      clearTimeout(timer); signal?.removeEventListener('abort', onAbort);
+      if (err) stderr += String(err);
+      resolve({ code, stdout, stderr, ok: code === 0, aborted: !!signal?.aborted });
+    };
+    child.on('error', (e) => finish(null, e));
+    child.on('close', (code) => finish(code));
+  });
 }
 
 /** Looks the toolkit knows about: one per themes/<look>.css. */

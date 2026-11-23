@@ -1,5 +1,6 @@
 // The prompts the app sends the Offers Agent (BUILD_SPEC §5).
 import { DELIVERABLES } from './stages.js';
+import { quickNote } from './quick.js';
 
 const label = (k) => (DELIVERABLES.find((d) => d.key === k) || { label: k }).label;
 
@@ -41,7 +42,8 @@ This is a rebuild: ${round.reason || 'an earlier stage changed'}. Rebuild from t
 
 /** Prompt for the round about to run. `resume` = the agent keeps the stage's session (edit rounds). */
 export function promptFor(job, stage, round, jobDir) {
-  if (round.edits.length) return { prompt: editPrompt(job, stage, round), resume: true };
-  if (round.n > 1) return { prompt: rerunPrompt(job, stage, round, jobDir), resume: false };
+  const quick = quickNote(job.stages[stage], round.n);
+  if (round.edits.length) return { prompt: editPrompt(job, stage, round) + quick, resume: true };
+  if (round.n > 1) return { prompt: rerunPrompt(job, stage, round, jobDir) + quick, resume: false };
   return { prompt: firstRunPrompt(job, stage, jobDir), resume: false };
 }

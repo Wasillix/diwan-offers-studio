@@ -99,6 +99,18 @@ export function sendEdits(job, key, edits) {
   queueEditRound(job, s, edits);
 }
 
+/**
+ * Quick edits (server/quick.js): the Studio applies price/name/unit/saving changes itself and re-renders,
+ * no agent. `planned` = [{ key, set, desc }]. Queues a "quick" round; the stage's unsent edits stay.
+ */
+export function queueQuick(job, key, planned) {
+  const s = expect(job, key, 'awaiting_review');
+  if (!Array.isArray(planned) || !planned.length) throw new MachineError('no quick edits to apply', 400);
+  s.rounds.push({ n: s.rounds.length + 1, kind: 'quick', edits: [], quick: planned, queuedAt: now() });
+  s.status = 'editing';
+  return lastRound(s);
+}
+
 /** Change something in a stage that's already approved. Later approved stages that depend on it rebuild. */
 export function reopen(job, key, edits) {
   const s = expect(job, key, 'approved');
