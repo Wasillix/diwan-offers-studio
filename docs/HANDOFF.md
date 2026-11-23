@@ -131,5 +131,7 @@ It's a raw log; this file is the summary to work from.
 - **Install from GitHub on any PC**: `Install.cmd` (double-click, works when downloaded alone), `Update.cmd`,
   desktop/Start menu shortcut, shared cut-out pack on the `assets` branch (`scripts/publish-assets.ps1`).
   The weekly reminder and Inbox now wait until Setup is finished on the PC. See README → Install on a PC.
-  Tested end to end against a local copy of the repo; the GitHub repo itself isn't created yet.
+  Tested end to end against a local copy of the repo. The code is on the private repo
+  github.com/Wasillix/diwan-offers-studio (`master`), with the cut-out pack on its `assets` branch (384 files).
+  Installers need a GitHub account added as a collaborator.
 - Next on the list: the client-feedback ideas.
