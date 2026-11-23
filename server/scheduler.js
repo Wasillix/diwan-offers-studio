@@ -1,6 +1,7 @@
 // Weekly reminder: at the set day and time (default Monday 10:00, Asia/Beirut) create a draft week for the
 // coming Friday–Monday from the template and nudge Waseem to drop the sheet. Fires once per day; if the PC
-// was off at 10:00 it fires the first time the app runs later that day.
+// was off at 10:00 it fires the first time the app runs later that day. Nothing fires on a PC until its
+// first-run Setup is finished (a new install would otherwise make a draft before its folders are confirmed).
 import { EventEmitter } from 'node:events';
 import { zonedParts, upcomingWeekend } from './dates.js';
 
@@ -24,8 +25,9 @@ export class Scheduler extends EventEmitter {
 
   /** Is it time? (right weekday, at or after the time, not fired today). Returns the job created, if any. */
   tick() {
-    const s = this.settings.get().schedule;
-    if (!s.enabled) return null;
+    const all = this.settings.get();
+    const s = all.schedule;
+    if (!s.enabled || !all.setup?.done) return null;
     const z = zonedParts(this.now(), s.timeZone);
     const hhmm = `${String(z.hour).padStart(2, '0')}:${String(z.minute).padStart(2, '0')}`;
     if (z.weekday !== s.weekday || hhmm < s.time || s.lastFired === z.ymd) return null;

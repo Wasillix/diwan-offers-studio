@@ -60,6 +60,26 @@ D:\Diwan\005 - FMCG Items\001 - Isolated Items\   Product photo library (read-on
 - `npm run smoke`: toolkit only (flyer, carousel, 16:9) for every look in `toolkit/themes/`, builds in `data/smoke/<look>/`
 - `npm run smoke:full`: same plus final PNGs, flattened PDF, mobile HTML and the MP4 (~1 min)
 
+## Install and update (Install.cmd, Update.cmd, scripts/)
+
+- `Install.cmd` is self-contained (batch header + PowerShell after the `##PS#` marker) so it works when
+  downloaded alone: winget prerequisites → `git clone` of the private repo (Git Credential Manager signs in)
+  → `scripts/setup.ps1`. Env vars for tests: `DIWAN_REPO`, `DIWAN_DIR`, `DIWAN_YES`, `DIWAN_NO_OPEN`,
+  `DIWAN_NOPAUSE`, `DIWAN_SHORTCUT_DIR`. The default repo URL is at the top of the PowerShell part.
+- `scripts/setup.ps1` (install and `-Update`): `npm ci` only when package-lock changed, Playwright shell with a
+  6-minute limit (its unpacking hangs on some PCs; update only retries when packages changed), pip, `.env`,
+  cut-out pack, shortcuts, Claude sign-in. Never touches `data/` or `.env` values.
+- `scripts/update.ps1`: refuses on local changes or local commits, `git merge --ff-only`, stops the server
+  (node processes running this folder's `server/index.js`) and starts it again.
+- `scripts/open-studio.ps1` via `scripts/Open Studio.vbs` (shortcut target, no window): start if not
+  running, wait for `/api/meta`, open the browser. Error box closes itself after 2 minutes.
+- Cut-out pack: orphan branch `assets` (`img/`, `img_pdf/`, `canvas_assets/`), fetched with `--depth 1`
+  and copied in new-files-only. `scripts/publish-assets.ps1` adds new files to it from a PC.
+- Scripts run in Windows PowerShell 5.1: keep them ASCII (BOM-less files are read as ANSI) and CRLF
+  (`.gitattributes`). Native stderr redirected under `ErrorActionPreference=Stop` throws: use `Test-Native`.
+  PowerShell variables ignore case (`$p` overwrites `$P`). Git Bash `sed -i` strips CRs from CRLF files.
+- Scheduler and Inbox watcher do nothing until `settings.setup.done` (first-run Setup finished on that PC).
+
 ## Images on edits, missing photos, the library, Setup
 
 - `attachments.js`: `POST /api/jobs/:id/attachments` (one image, ≤25 MB) → `attachments/<stage>/<stamp>-<slug>.<ext>`,

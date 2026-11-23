@@ -108,7 +108,6 @@ These are the client's rules now. The playbook's currency lines were aligned wit
 - Client questions from the dry run: whether the branches list and app links are still current; the full
   list is in the dry-run delivery's `client_questions.txt` (11 items).
 - 102 product images were missing for the toolkit smoke test (no 800 px library). This shrinks as weeks promote cut-outs.
-- Possible small follow-up: a double-click `Start Studio.cmd` and README switched to `npm.cmd`.
 
 ## 9. Where the original conversation is
 
@@ -129,4 +128,8 @@ It's a raw log; this file is the summary to work from.
 - **UI redesign**: Diwan Market brand on the unslop rules (github.com/heydamir/unslop, CC BY 4.0,
   credited in README). Teshrin for Arabic and English, the Diwan wordmark in the top bar, one red accent,
   status as dot + text, a yellow date sticker on week dates. See CLAUDE.md → Studio UI notes.
-- Next on the list: installing from GitHub (`Install.cmd`, private repo), then the client-feedback ideas.
+- **Install from GitHub on any PC**: `Install.cmd` (double-click, works when downloaded alone), `Update.cmd`,
+  desktop/Start menu shortcut, shared cut-out pack on the `assets` branch (`scripts/publish-assets.ps1`).
+  The weekly reminder and Inbox now wait until Setup is finished on the PC. See README → Install on a PC.
+  Tested end to end against a local copy of the repo; the GitHub repo itself isn't created yet.
+- Next on the list: the client-feedback ideas.

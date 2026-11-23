@@ -1,0 +1,63 @@
+# Shared helpers for the Studio's install, update and launch scripts (dot-sourced, Windows PowerShell 5.1).
+# Keep this file ASCII: Windows PowerShell reads BOM-less scripts in the ANSI code page.
+
+$Root = Split-Path -Parent $PSScriptRoot
+
+function Step([string]$Text) { Write-Host ''; Write-Host "== $Text" -ForegroundColor Cyan }
+function Say([string]$Text, [string]$Color = 'Gray') { Write-Host "   $Text" -ForegroundColor $Color }
+
+# winget installs change PATH in the registry only; pick the new value up in this window.
+function Update-PathEnv {
+  $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
+}
+
+# Runs a native command and throws when it fails (native commands don't stop on errors by themselves).
+function Invoke-Native([string]$What, [scriptblock]$Run) {
+  & $Run
+  if ($LASTEXITCODE -ne 0) { throw "$What failed (exit code $LASTEXITCODE)." }
+}
+
+# Runs a native command quietly and returns whether it succeeded. Redirecting a native command's stderr in
+# Windows PowerShell turns each line into an error record, so errors must not stop the script here.
+function Test-Native([scriptblock]$Run) {
+  $old = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try { & $Run *> $null; return ($LASTEXITCODE -eq 0) } finally { $ErrorActionPreference = $old }
+}
+
+function Get-StudioPort {
+  $port = 4321
+  $envFile = Join-Path $Root '.env'
+  if (Test-Path -LiteralPath $envFile) {
+    foreach ($line in Get-Content -LiteralPath $envFile) { if ($line -match '^\s*PORT\s*=\s*(\d+)\s*$') { $port = [int]$Matches[1] } }
+  }
+  return $port
+}
+
+function Test-StudioUp([int]$Port) {
+  try { return ((Invoke-WebRequest "http://127.0.0.1:$Port/api/meta" -UseBasicParsing -TimeoutSec 2).StatusCode -eq 200) } catch { return $false }
+}
+
+# The Studio's node process for this folder (started by the shortcut, Start with Windows, or Install).
+function Get-StudioProcess {
+  $needle = (Join-Path $Root 'server\index.js').ToLower()
+  @(Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -and $_.CommandLine.ToLower().Contains($needle) })
+}
+
+# Starts the server with no window, appending its output to data\server.log (same as Start with Windows).
+function Start-Studio {
+  $node = (Get-Command node -ErrorAction SilentlyContinue).Source
+  if (-not $node) { throw 'Node.js is not installed. Run Install.cmd again.' }
+  New-Item -ItemType Directory -Force (Join-Path $Root 'data') | Out-Null
+  $js = Join-Path $Root 'server\index.js'
+  $log = Join-Path $Root 'data\server.log'
+  # if something still holds server.log open, cmd can't append to it and node never starts: use a fresh log
+  try { [IO.File]::Open($log, 'Append', 'Write', 'ReadWrite').Close() } catch { $log = Join-Path $Root ('data\server-{0:yyyyMMdd-HHmmss}.log' -f (Get-Date)) }
+  Start-Process -FilePath $env:ComSpec -ArgumentList "/c `"`"$node`" `"$js`" >> `"$log`" 2>&1`"" -WorkingDirectory $Root -WindowStyle Hidden
+  return $log
+}
+
+function Wait-StudioUp([int]$Port, [int]$Seconds = 30) {
+  for ($i = 0; $i -lt ($Seconds * 2); $i++) { if (Test-StudioUp $Port) { return $true }; Start-Sleep -Milliseconds 500 }
+  return $false
+}

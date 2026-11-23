@@ -1,6 +1,7 @@
 // Offers Inbox watcher: a new .xlsx in D:\Diwan\Offers Inbox becomes a draft week with the sheet attached.
 // Name and dates are guessed from the file name; intake only starts after Waseem confirms the draft.
 // Files in the inbox are never moved or changed. data/inbox.json remembers which ones became weeks.
+// Nothing is picked up until this PC's first-run Setup is finished (the folder may not be the right one yet).
 import fs from 'node:fs';
 import path from 'node:path';
 import { EventEmitter } from 'node:events';
@@ -45,7 +46,7 @@ export class InboxWatcher extends EventEmitter {
 
   /** Look for new sheets. Returns the jobs created. Safe to call any time. */
   async scan() {
-    if (this.busy) return [];
+    if (this.busy || !this.settings.get().setup?.done) return [];
     this.busy = true;
     const created = [];
     try {

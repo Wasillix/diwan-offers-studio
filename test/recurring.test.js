@@ -67,6 +67,8 @@ test('inbox: a new sheet becomes a draft with the guessed name and dates, once',
   fs.writeFileSync(path.join(inboxDir, '~$Weekend Offers 20-23 Nov.xlsx'), 'excel lock file');
   fs.writeFileSync(path.join(inboxDir, 'notes.txt'), 'not a sheet');
   const w = new InboxWatcher({ config: e.config, settings: e.settings, store: e.store, notifier: e.notifier, now: () => NOW, stableMs: 10, createOpts: { copyToolkit: false } });
+  assert.equal((await w.scan()).length, 0, 'nothing is picked up before Setup is finished on this PC');
+  e.settings.update({ setup: { done: true, at: NOW.toISOString() } });
   const made = await w.scan();
   assert.equal(made.length, 1);
   const job = e.store.get(made[0].id);
@@ -89,6 +91,8 @@ test('reminder: fires once on the day at or after the time (Beirut), creates the
   assert.match(s.nextRun(), /^Monday 23 November, 10:00 \(Asia\/Beirut\)$/);
   assert.equal(s.tick(), null, 'not yet');
   now = new Date(Date.UTC(2026, 10, 23, 9, 30)); // 11:30: the PC was off at 10:00
+  assert.equal(s.tick(), null, 'a new install makes no draft before Setup is finished');
+  e.settings.update({ setup: { done: true, at: now.toISOString() } });
   const job = s.tick();
   assert.ok(job);
   assert.equal(job.dates_en, '27 – 30 November 2026');

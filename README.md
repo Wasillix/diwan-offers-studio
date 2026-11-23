@@ -49,6 +49,8 @@ depend on it rebuild. A price or card change on any stage after Cards rebuilds t
 
 ## Starting and stopping
 
+- Open it from the **Diwan Offers Studio** shortcut (desktop or Start menu). It starts the Studio quietly if it
+  isn't running yet and opens it in the browser.
 - Turn on **Settings → Start with Windows** and it runs in the background from sign-in.
 - Or run it yourself in a terminal in this folder:
 
@@ -92,7 +94,40 @@ design direction, ask Claude Code in this folder:
 > Create a new look skill `diwan-look-<name>` following the structure of the existing look skills: <the mood>.
 > Add its theme CSS, run the smoke test with it, and show me pages 1 and 3.
 
-## Setup on a new PC (once)
+## Install on a PC
+
+The code lives in a **private** GitHub repo, so whoever installs needs a GitHub account that can see it
+(add them as a collaborator on the repo).
+
+1. On the repo page on GitHub, open **Install.cmd** and download it (**Download raw file**).
+2. Double-click it. It:
+   - installs Git, Node.js, Python 3 and ffmpeg with winget if they're missing,
+   - asks where to put the Studio (default `D:\Diwan\Offers Studio`) and downloads it there. The first time,
+     a GitHub sign-in window opens,
+   - installs the Node and Python packages and the render browser (if that fails, renders use Edge),
+   - makes `.env`, copies in the shared product cut-outs,
+   - adds a **Diwan Offers Studio** shortcut to the desktop and Start menu,
+   - opens a Claude window to sign in once, if this PC isn't signed in yet,
+   - opens the Studio, which asks for this PC's folders (Setup).
+3. Running it again repairs an install; it never touches `data\` (the weeks) or `.env`.
+
+Each PC has its own weeks, settings and Claude sign-in; nothing is shared between PCs except the code and
+the cut-out pack. The weekly reminder and the Offers Inbox only start once Setup is finished on that PC, so
+turn the reminder off (Settings) on PCs that shouldn't make Monday's draft.
+
+## Update
+
+Double-click **Update.cmd** in the Studio folder. It downloads the latest version, stops the Studio if it's
+running, updates, and starts it again. Weeks, settings and `.env` stay as they are. It refuses to update a
+copy whose code was changed on that PC.
+
+## Share new cut-outs with the other PCs
+
+Cut-outs that delivered weeks add to `toolkit\img*` stay on the PC that made them. From the main PC, run
+`powershell -ExecutionPolicy Bypass -File scripts\publish-assets.ps1`: it sends the new ones to the repo's
+`assets` branch (adds only, never replaces), and other PCs get them with **Update.cmd**.
+
+## Setting up by hand (developers)
 
 1. Install Node.js LTS, Python 3 (tick "Add to PATH"), Git for Windows and ffmpeg (`winget install ffmpeg`).
 2. `py -3 -m pip install pillow pypdf reportlab openpyxl fonttools brotli`
